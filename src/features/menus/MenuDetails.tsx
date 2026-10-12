@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { usePermissions } from "@/features/auth/hooks";
+import { useBranchScope, usePermissions } from "@/features/auth/hooks";
 import { Pagination } from "@/components/ui/Pagination";
 import { PAGE_SIZE, pageOf } from "@/components/ui/paging";
 import { currentLanguage } from "@/i18n";
@@ -28,19 +28,39 @@ interface MenuItemView {
 
 /**
  * تفاصيل القائمة كما في الداشبورد القديم: أصنافها مجمّعة حسب التصنيف في تبويبات، مع صورة
- * كل صنف وسعره بعملة القائمة. التبويب «الكل» يعرض الأصناف جميعها. ومن يملك الصلاحية
- * يوقف توفّر صنف داخل هذه القائمة أو يعيده.
+ * كل صنف وسعره بعملة القائمة. التبويب «الكل» يعرض الأصناف جميعها. توفّر كل صنف يُقرأ من
+ * القائمة العامة كما يراها الزبون، ومن يملك الصلاحية يوقف الصنف في هذه القائمة وحده.
  */
 export function MenuDetails({ record }: { record: Named }) {
   const { t } = useTranslation();
   const language = currentLanguage();
-  const canToggle = usePermissions().has(AVAILABILITY_PERMISSION);
+  const queryClient = useQueryClient();
+  const permissions = usePermissions();
+  const scope = useBranchScope();
   const [active, setActive] = useState<"all" | number>("all");
   const [page, setPage] = useState(1);
-  // التوفّر الذي غيّرته هذه النافذة، يظهر فوراً دون انتظار إعادة تحميل القائمة.
+  // التوفّر الذي غيّرته هذه النافذة، يظهر فوراً دون انتظار إعادة الجلب.
   const [availability, setAvailability] = useState<Partial<Record<number, boolean>>>({});
 
+  // مصدر حالة التوفّر هو القائمة العامة كما يقرؤها الموقع، ونسخة الإدارة قد لا تحمل الحقل.
+  const publicMenu = useQuery({
+    queryKey: ["public-menu", record.id],
+    queryFn: () => menuApi.publicGet(record.id),
+  });
+  const publicAvailability = useMemo(() => {
+    const map = new Map<number, boolean>();
+    for (const entry of asArray(asRecord(publicMenu.data).items)) {
+      const row = asRecord(entry);
+      map.set(toNumber(row.item_id ?? row.id), row.is_available !== false);
+    }
+    return map;
+  }, [publicMenu.data]);
+
   const menuCurrency = toText(record.currency);
+  // المستخدم المرتبط بفرع يوقف أصناف فرعه وحده، والخادم يرفض قائمة غيرها بـ 403.
+  const menuBranchId = toNumber(record.branch_id ?? asRecord(record.branch).id);
+  const canToggle =
+    permissions.has(AVAILABILITY_PERMISSION) && (!scope.isBranchScoped || scope.branchId === menuBranchId);
 
   const items = useMemo<MenuItemView[]>(
     () =>
@@ -65,12 +85,18 @@ export function MenuDetails({ record }: { record: Named }) {
   const save = useMutation({
     mutationFn: ({ itemId, next }: { itemId: number; next: boolean }) =>
       menuApi.setItemAvailability(record.id, itemId, next),
-    onSuccess: (_, { itemId, next }) => {
-      setAvailability((current) => ({ ...current, [itemId]: next }));
+    onSuccess: (result, { itemId, next }) => {
+      // الخادم يعيد الحالة التي حفظها وهي المعتمدة، وإن غابت نأخذ ما أرسلناه.
+      const confirmed = asRecord(asRecord(result).data).is_available;
+      setAvailability((current) => ({ ...current, [itemId]: typeof confirmed === "boolean" ? confirmed : next }));
+      void queryClient.invalidateQueries({ queryKey: ["public-menu", record.id] });
       toast.success(t("itemAvailability.saved"));
     },
     onError: (caught) => toast.error(toApiError(caught, t("errors.unexpected")).message),
   });
+
+  // الأولوية: ما غيّرته هذه النافذة، ثم القائمة العامة، ثم نسخة الإدارة.
+  const isOn = (item: MenuItemView) => availability[item.id] ?? publicAvailability.get(item.id) ?? item.available;
 
   // تصنيفات الأصناف بترتيب ظهورها، دون تكرار.
   const categories = useMemo(() => {
@@ -118,7 +144,7 @@ export function MenuDetails({ record }: { record: Named }) {
       ) : (
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {paged.items.map((item) => {
-            const on = availability[item.id] ?? item.available;
+            const on = isOn(item);
             return (
               <li key={`${item.id}-${item.categoryId ?? "none"}`} className="overflow-hidden rounded-2xl border border-line bg-surface">
                 {item.image ? (
@@ -139,7 +165,7 @@ export function MenuDetails({ record }: { record: Named }) {
                       <AvailabilitySwitch
                         on={on}
                         label={t("itemAvailability.toggle")}
-                        disabled={save.isPending && save.variables?.itemId === item.id}
+                        disabled={publicMenu.isPending || (save.isPending && save.variables?.itemId === item.id)}
                         onToggle={() => save.mutate({ itemId: item.id, next: !on })}
                       />
                     )}
