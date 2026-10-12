@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Bell, BellOff, ChevronDown, Eye, Lock, RotateCcw } from "lucide-react";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/Fields";
+import { RemoteSelect } from "@/components/ui/RemoteSelect";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
@@ -13,11 +14,12 @@ import { Skeleton } from "@/components/ui/Bars";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { useBranchScope, usePermissions } from "@/features/auth/hooks";
 import { ADMIN_DRIVER_PERMISSIONS } from "@/features/drivers/permissions";
-import { useDriverOptions } from "@/features/drivers/useDriverOptions";
+import { driverFilterSource } from "@/features/drivers/driverSource";
 import { currentLanguage } from "@/i18n";
 import { asRecord, toNumber, toText } from "@/lib/coerce";
 import { formatDateTime, formatMoney, formatNumber } from "@/lib/format";
 import { localizedRecord } from "@/lib/localized";
+import { remoteSource } from "@/modules/shared";
 import { branches, listAll, orderAdmin, type Named } from "@/services";
 import { OrderInvoice } from "./OrderInvoice";
 import { StatusPicker } from "./StatusPicker";
@@ -28,6 +30,9 @@ import { canAssignDriver } from "./driverAssignment";
 import { useNewOrderAlert } from "./newOrderAlert";
 
 type OrderType = "delivery" | "pickup";
+
+// الفروع تُبحث في الخادم عشرين في الصفحة، كما في قائمة الفرع عند إنشاء الطلب.
+const BRANCH_FILTER = remoteSource("branches", branches);
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
@@ -57,10 +62,14 @@ export function OrdersPage() {
   const [status, setStatus] = useState("");
   const [typeFilter, setTypeFilter] = useState<"" | OrderType>("");
   const [branchFilter, setBranchFilter] = useState<number | null>(null);
+  const [branchLabel, setBranchLabel] = useState("");
   const [date, setDate] = useState("");
   const [maxRating, setMaxRating] = useState("");
   // قيمة واحدة لفلتر السائق: "needs" للطلبات بلا سائق، أو معرّف سائق بعينه، أو فارغ للكل.
   const [driverChoice, setDriverChoice] = useState("");
+  // اسم السائق المختار يُحفظ مع القيمة، فلا يُطلب من الخادم مجدداً عند كل عرض.
+  const [driverLabel, setDriverLabel] = useState("");
+  const driverFilter = useMemo(() => driverFilterSource(t), [t]);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [viewing, setViewing] = useState<Named | null>(null);
@@ -71,9 +80,9 @@ export function OrdersPage() {
   const canView = permissions.has("admin.orders.show");
   const canChangeStatus = permissions.has("admin.orders.status.update");
   const canAssign = permissions.has(ADMIN_DRIVER_PERMISSIONS.assign);
-  const drivers = useDriverOptions(canList);
   // تنبيه الطلبات الجديدة: الاستعلام الدوري يعمل مع الصفحة، والصوت اختياري.
-  const alert = useNewOrderAlert(canList);
+  // "عرض الأحدث" في التنبيه يعيد القائمة إلى الصفحة الأولى، حيث تظهر الطلبات الجديدة.
+  const alert = useNewOrderAlert(canList, () => setPage(1));
   // المستخدم المرتبط بفرع يرى فرعه فقط، والخادم يفرض ذلك أيضاً.
   const branchId = scope.isBranchScoped ? scope.branchId : branchFilter;
 
@@ -87,13 +96,6 @@ export function OrdersPage() {
     driver_id: /^\d+$/.test(driverChoice) ? Number(driverChoice) : undefined,
   };
   const typed = typeFilter !== "";
-
-  const branchList = useQuery({
-    queryKey: ["orders-page", "branches"],
-    queryFn: async ({ signal }) => (await branches.list({ page: 1, per_page: 500 }, signal)).items,
-    enabled: canList && !scope.isBranchScoped,
-    staleTime: 5 * 60_000,
-  });
 
   // بلا فلتر النوع: الترقيم من الخادم مباشرة.
   const pageQuery = useQuery({
@@ -137,9 +139,11 @@ export function OrdersPage() {
     setStatus("");
     setTypeFilter("");
     setBranchFilter(null);
+    setBranchLabel("");
     setDate("");
     setMaxRating("");
     setDriverChoice("");
+    setDriverLabel("");
     setPage(1);
   };
 
@@ -192,27 +196,28 @@ export function OrdersPage() {
             setPage(1);
           }}
         />
-        <SelectField
+        <RemoteSelect
           label={t("ordersPage.branchFilter")}
-          options={(branchList.data ?? []).map((row) => ({ value: toNumber(row.id), label: localizedRecord(row, language) || `#${row.id}` }))}
+          source={BRANCH_FILTER}
           value={branchId}
+          fallbackLabel={branchLabel || undefined}
           disabled={scope.isBranchScoped}
           placeholder={t("ordersPage.allBranches")}
-          onChange={(value) => {
+          onChange={(value, label) => {
             setBranchFilter(value === null ? null : Number(value));
+            setBranchLabel(label);
             setPage(1);
           }}
         />
-        <SelectField
+        <RemoteSelect
           label={t("ordersPage.driverFilter")}
-          options={[
-            { value: "needs", label: t("drivers.assign.needsDriver") },
-            ...(drivers.data ?? []).map((driver) => ({ value: driver.id, label: driver.name })),
-          ]}
+          source={driverFilter}
           value={driverChoice || null}
+          fallbackLabel={driverLabel || undefined}
           placeholder={t("ordersPage.allDrivers")}
-          onChange={(value) => {
+          onChange={(value, label) => {
             setDriverChoice(value === null ? "" : String(value));
+            setDriverLabel(label);
             setPage(1);
           }}
         />
@@ -359,7 +364,7 @@ export function OrdersPage() {
       {assigning && <AssignDriverDialog row={assigning} onClose={() => setAssigning(null)} />}
 
       {viewing && (
-        <Dialog open onClose={() => setViewing(null)} size="lg" title={refOf(viewing)}>
+        <Dialog open onClose={() => setViewing(null)} size="lg" title={t("orderInvoice.title")}>
           <OrderInvoice record={viewing} />
         </Dialog>
       )}

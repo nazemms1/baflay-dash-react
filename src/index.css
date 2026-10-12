@@ -60,38 +60,104 @@
 }
 
 /*
- * الطباعة تُظهر منطقة `#print-area` وحدها: الإيصال (بعرض الطابعة الحرارية) أو الفاتورة (بعرض الصفحة).
- * كل ما عداها مخفي، وتُلصق المنطقة بأعلى الصفحة.
+ * صفحتان مسمّاتان: الفاتورة على A4، والإيصال بعرض الطابعة الحرارية 80mm.
+ */
+@page invoice {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@page receipt {
+  size: 80mm auto;
+  margin: 3mm;
+}
+
+/*
+ * الطباعة تُظهر منطقة `#print-area` وحدها. النافذة التي تحملها تُعرض في تدفق الصفحة العادي،
+ * لا `fixed`، فتتقسم الفاتورة الطويلة على أوراق متتالية دون أن تُقصّ أو يتكرر رأسها في كل ورقة.
+ * وأزرار النافذة ورأسها وتذييلها تختفي، ولا يبقى إلا المستند نفسه.
  */
 @media print {
-  body * {
-    visibility: hidden;
+  /* الارتفاع الكامل للجذر والحشو الخارجي للنافذة يتركان ورقة فارغة قبل المستند، فيُلغيان هنا. */
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  #print-area,
-  #print-area * {
-    visibility: visible;
+  body > * {
+    display: none;
   }
 
-  #print-area {
-    position: fixed;
-    inset: 0 auto auto 0;
+  /* كل ما يحيط بالمستند يجب أن يكون على الصفحة المسماة نفسها، وإلا تُنشأ ورقة فارغة قبله. */
+  body > :has(#print-area) {
+    display: block;
+    position: static;
+    inset: auto;
+    margin: 0;
+    padding: 0;
+    background: none;
+    page: invoice;
+  }
+
+  body > :has(#print-area) *:has(#print-area) {
+    page: inherit;
+  }
+
+  body > :has(#print-area.receipt-print) {
+    page: receipt;
+  }
+
+  /* الجذر نفسه على الصفحة المسماة، فلا يبقى صندوق على الصفحة الافتراضية قبل المستند. */
+  html:has(#print-area),
+  body:has(#print-area) {
+    page: invoice;
+  }
+
+  html:has(#print-area.receipt-print),
+  body:has(#print-area.receipt-print) {
+    page: receipt;
+  }
+
+  /* خلفية النافذة، وكل ما داخلها خارج المستند: الأزرار والرأس والتذييل وأشرطة الأدوات. */
+  body > :has(#print-area) > button,
+  body > :has(#print-area) [role="dialog"] *:not(:has(#print-area)):not(#print-area):not(#print-area *) {
+    display: none;
+  }
+
+  body > :has(#print-area) [role="dialog"] {
+    position: static;
+    display: block;
     width: 100%;
     max-width: none;
-    padding: 0;
-    border: 0;
+    max-height: none;
     border-radius: 0;
     box-shadow: none;
   }
 
-  #print-area.receipt-print {
-    width: 80mm;
+  body > :has(#print-area) [role="dialog"] > div {
+    display: block;
+    overflow: visible;
+    padding: 0;
+    flex: none;
   }
 
-  /* الألوان تُطبع كما هي، فرأس الإيصال بلون الهوية يبقى ظاهراً على الورق. */
   #print-area {
+    page: invoice;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  #print-area.receipt-print {
+    page: receipt;
+    width: 80mm;
   }
 }
 

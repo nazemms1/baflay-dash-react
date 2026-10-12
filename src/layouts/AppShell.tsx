@@ -6,6 +6,7 @@ import { LogOut, Menu, X } from "lucide-react";
 import { useBranchScope, usePermissions } from "@/features/auth/hooks";
 import { useSession } from "@/features/auth/session-store";
 import { currentLanguage } from "@/i18n";
+import { APP_BUILD_DATE, APP_COMMIT, APP_VERSION } from "@/config/version";
 import { localizedName } from "@/lib/localized";
 import { LanguageSwitch } from "@/components/ui/LanguageSwitch";
 import { PageLoader } from "@/components/ui/PageLoader";
@@ -125,6 +126,14 @@ function Sidebar({
           );
         })}
       </nav>
+
+      <footer
+        dir="ltr"
+        title={t("shell.buildDate", { date: APP_BUILD_DATE })}
+        className="border-t border-night-line px-5 py-3 text-xs tabular-nums text-surface/50"
+      >
+        v{APP_VERSION} · {APP_BUILD_DATE} · {APP_COMMIT}
+      </footer>
     </aside>
   );
 }

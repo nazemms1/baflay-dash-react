@@ -84,7 +84,8 @@
     "body": "الحساب مسجّل كزبون. لاستخدام اللوحة يلزم حساب إداري بصلاحيات مُعيّنة."
   },
   "shell": {
-    "branch": "الفرع: {{name}}"
+    "branch": "الفرع: {{name}}",
+    "buildDate": "تاريخ البناء: {{date}}"
   },
   "notFound": {
     "title": "الصفحة غير موجودة",
@@ -95,7 +96,14 @@
     "unexpected": "حدث خطأ غير متوقع. حاول مرة أخرى.",
     "sessionExpired": "انتهت الجلسة. سجّل الدخول من جديد.",
     "forbidden": "ليس لديك صلاحية لتنفيذ هذا الإجراء.",
-    "backToLogin": "العودة إلى تسجيل الدخول"
+    "backToLogin": "العودة إلى تسجيل الدخول",
+    "boundaryTitle": "حدث خلل غير متوقع",
+    "boundaryMessage": "عذراً، توقفت هذه الشاشة عن العمل. أعد تحميل الصفحة، وإن تكرر الأمر فتواصل مع الفريق التقني.",
+    "reload": "إعادة تحميل الصفحة",
+    "goHome": "الذهاب إلى الرئيسية",
+    "configTitle": "التطبيق غير مكتمل الإعداد",
+    "configMessage": "لم يتم ضبط عنوان الخادم بعد. يرجى التواصل مع الفريق التقني.",
+    "configDevHint": "أضف VITE_API_URL في ملف .env ثم أعد تشغيل الخادم المحلي."
   },
   "dashboard": {
     "title": "نظرة عامة",
@@ -727,7 +735,19 @@
     "serverData": "بيانات الخادم (للمراجعة)",
     "downloadPdf": "تحميل PDF",
     "preparingPdf": "جارٍ تجهيز الملف…",
-    "pdfFailed": "تعذّر إنشاء ملف PDF، حاول مرة أخرى."
+    "pdfFailed": "تعذّر إنشاء ملف PDF، حاول مرة أخرى.",
+    "title": "فاتورة الطلب",
+    "customerPhone": "هاتف الزبون",
+    "currency": "العملة",
+    "distance": "المسافة",
+    "km": "كم",
+    "sectionCustomer": "الزبون",
+    "sectionOrder": "الطلب",
+    "sectionDelivery": "التوصيل",
+    "sectionTimeline": "متابعة التوصيل",
+    "sectionFailure": "تعذّر التسليم",
+    "thanks": "شكراً لطلبك",
+    "printedAt": "طُبعت في {{date}}"
   },
   "ordersPage": {
     "noAccess": "لا تملك صلاحية عرض الطلبات.",
@@ -769,7 +789,14 @@
     "soundOn": "تفعيل صوت الطلبات الجديدة",
     "soundOff": "إيقاف الصوت",
     "soundHint": "القائمة تتحدّث كل 25 ثانية، ويرن الصوت عند وصول طلب جديد.",
-    "newOrders": "وصل {{count}} طلب جديد"
+    "newOrdersTitle_one": "طلب جديد",
+    "newOrdersTitle_two": "طلبان جديدان",
+    "newOrdersTitle_few": "{{count}} طلبات جديدة",
+    "newOrdersTitle_many": "{{count}} طلباً جديداً",
+    "newOrdersTitle_other": "{{count}} طلب جديد",
+    "newOrdersHint": "القائمة محدّثة الآن",
+    "newOrdersView": "عرض الأحدث",
+    "newOrdersDismiss": "إغلاق"
   },
   "crop": {
     "title": "قص الصورة",
@@ -1020,6 +1047,7 @@
       "none": "بدون سائق",
       "noDrivers": "لا يوجد سائقون في هذا الفرع.",
       "needsDriver": "بانتظار سائق",
+      "otherBranch": "فرع آخر",
       "change": "تغيير السائق",
       "assign": "إسناد سائق"
     },

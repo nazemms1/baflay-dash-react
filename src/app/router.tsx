@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import { createBrowserRouter } from "react-router-dom";
+import { PageErrorScreen, RenderErrorScreen } from "@/components/ErrorScreen";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { RequireSession } from "@/features/auth/RequireSession";
 import { PendingModulePage } from "@/pages/PendingModulePage";
@@ -64,19 +66,24 @@ const pendingRoutes = NAV_GROUPS.flatMap((group) => group.items)
     element: <PendingModulePage titleKey={`nav.${item.key}`} />,
   }));
 
+/** خطأ الصفحة يظهر داخل الإطار نفسه، فتبقى القائمة الجانبية تعمل للتنقل إلى صفحة أخرى. */
+const withPageErrors = (routes: { path: string; element: ReactNode }[]) =>
+  routes.map((route) => ({ ...route, errorElement: <PageErrorScreen /> }));
+
 export const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
+  { path: "/login", element: <LoginPage />, errorElement: <RenderErrorScreen /> },
   {
     element: <RequireSession />,
+    errorElement: <RenderErrorScreen />,
     children: [
       {
         element: <AppShell />,
         children: [
-          { index: true, element: <HomeRoute /> },
-          { path: "welcome", element: <WelcomePage /> },
-          { path: "profile", element: <ProfilePage /> },
-          ...CRUD_ROUTES,
-          ...pendingRoutes,
+          { index: true, element: <HomeRoute />, errorElement: <PageErrorScreen /> },
+          { path: "welcome", element: <WelcomePage />, errorElement: <PageErrorScreen /> },
+          { path: "profile", element: <ProfilePage />, errorElement: <PageErrorScreen /> },
+          ...withPageErrors(CRUD_ROUTES),
+          ...withPageErrors(pendingRoutes),
         ],
       },
     ],

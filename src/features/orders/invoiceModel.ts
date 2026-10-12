@@ -39,8 +39,11 @@ export interface InvoiceModel {
   createdAt: string;
   branch: string;
   customer: string;
+  customerPhone: string;
   orderType: "delivery" | "pickup";
   address: string;
+  /** المسافة بالكيلومتر لطلبات التوصيل، أو `null` إن لم يرسلها الخادم. */
+  distanceKm: number | null;
   paymentMethod: string;
   currency: string;
   notes: string;
@@ -107,11 +110,12 @@ function toLine(row: Rec, index: number, language: Language): InvoiceLine {
 
 function toSauce(row: Rec, index: number, language: Language): InvoiceSauce {
   const quantity = toNumber(row.quantity) || 1;
+  const unitPrice = toNumber(row.price) || toNumber(row.unit_price);
   return {
     key: `sauce-${index}-${String(row.id ?? index)}`,
     name: localizedRecord(row, language) || toText(row.name),
     quantity,
-    amount: toNumber(row.total) || toNumber(row.price) * quantity,
+    amount: toNumber(row.total_price) || toNumber(row.total) || unitPrice * quantity,
   };
 }
 
@@ -125,7 +129,10 @@ export function toInvoiceModel(invoice: unknown, record: Named, language: Langua
   const lines = rowsOf(inv.lines, inv.order_items, inv.items, record.order_items, record.items).map((entry, index) =>
     toLine(asRecord(entry), index, language)
   );
-  const sauces = rowsOf(inv.extras, record.extras).map((entry, index) => toSauce(asRecord(entry), index, language));
+  // الصلصات تأتي في `order_extras` من الفاتورة، والاسم القديم `extras` يبقى احتياطاً.
+  const sauces = rowsOf(inv.order_extras, inv.extras, record.order_extras, record.extras).map((entry, index) =>
+    toSauce(asRecord(entry), index, language)
+  );
 
   const itemsSubtotal = positiveOr(inv.items_subtotal) ?? positiveOr(inv.subtotal) ?? sum(lines.map((line) => line.total));
   const saucesTotal = positiveOr(inv.extras_total) ?? sum(sauces.map((sauce) => sauce.amount));
@@ -150,8 +157,10 @@ export function toInvoiceModel(invoice: unknown, record: Named, language: Langua
       toText(inv.customer_name) ||
       toText(asRecord(record.customer).name) ||
       toText(record.customer_name),
+    customerPhone: toText(asRecord(inv.customer).phone) || toText(asRecord(record.customer).phone),
     orderType: deliveryType === "delivery" ? "delivery" : "pickup",
     address: toText(inv.delivery_address) || toText(inv.address_details),
+    distanceKm: toNullableNumber(inv.delivery_distance_km) ?? toNullableNumber(record.delivery_distance_km),
     paymentMethod: toText(inv.payment_method) || "cash",
     currency: toText(inv.currency) || toText(record.currency),
     // ملاحظة نقطة البيع تعني «داخل الصالة» وليست ملاحظة من الزبون، فلا تُعرض كملاحظة.

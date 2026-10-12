@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
@@ -6,6 +7,23 @@ import { Check, ChevronDown, Search, X } from "lucide-react";
 import type { RemoteSource } from "@/components/crud/types";
 import type { Option } from "./Fields";
 import { dropdownClass } from "./dropdownStyle";
+
+const PANEL_GAP = 6;
+// ارتفاع تقريبي للبحث والنتائج، يكفي لقلب القائمة إلى الأعلى عند ضيق المساحة تحت الحقل.
+const PANEL_HEIGHT = 320;
+
+/** موضع القائمة الثابت فوق الحقل المفتوح أو تحته، ويُقلب إلى الأعلى إن لم يبقَ مكان بالأسفل. */
+function panelStyle(anchor: DOMRect): CSSProperties {
+  const spaceBelow = window.innerHeight - anchor.bottom;
+  // يُقلب إلى الأعلى فقط إن ضاقت المساحة تحته، وكانت فوقه أوسع.
+  const openUp = spaceBelow < PANEL_HEIGHT && anchor.top > spaceBelow;
+  return {
+    position: "fixed",
+    left: anchor.left,
+    width: anchor.width,
+    ...(openUp ? { bottom: window.innerHeight - anchor.top + PANEL_GAP } : { top: anchor.bottom + PANEL_GAP }),
+  };
+}
 
 interface RemoteSelectProps {
   label: string;
@@ -38,8 +56,12 @@ export function RemoteSelect({
   const { t } = useTranslation();
   const generated = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
+  // موضع الحقل عند الفتح. القائمة تُرسم في `body` بموضع ثابت، فلا تقصّها النوافذ أو الجداول التي تمرّر محتواها.
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const [query, setQuery] = useState("");
   const [term, setTerm] = useState("");
 
@@ -70,11 +92,12 @@ export function RemoteSelect({
   const shownLabel = fallbackLabel || chosen.data?.label || "";
   const selectedValue = String(value ?? "");
 
-  // إغلاق عند النقر خارج الحقل، ودخول مباشر إلى حقل البحث عند الفتح.
+  // إغلاق عند النقر خارج الحقل والقائمة معاً، ودخول مباشر إلى حقل البحث عند الفتح.
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!rootRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         setOpen(false);
         setQuery("");
       }
@@ -82,6 +105,25 @@ export function RemoteSelect({
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [open]);
+
+  // القائمة تتبع الحقل عند التمرير أو تغيير حجم النافذة.
+  useEffect(() => {
+    if (!open) return;
+    const follow = () => {
+      if (triggerRef.current) setAnchor(triggerRef.current.getBoundingClientRect());
+    };
+    window.addEventListener("resize", follow);
+    window.addEventListener("scroll", follow, true);
+    return () => {
+      window.removeEventListener("resize", follow);
+      window.removeEventListener("scroll", follow, true);
+    };
+  }, [open]);
+
+  const openList = () => {
+    setAnchor(triggerRef.current?.getBoundingClientRect() ?? null);
+    setOpen(true);
+  };
 
   useEffect(() => {
     if (open) searchRef.current?.focus();
@@ -101,12 +143,13 @@ export function RemoteSelect({
       </label>
 
       <button
+        ref={triggerRef}
         type="button"
         aria-labelledby={`${generated}-label`}
         aria-haspopup="listbox"
         aria-expanded={open}
         disabled={disabled}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => (open ? setOpen(false) : openList())}
         className={clsx(
           dropdownClass({ error: !!error, open }),
           "flex w-full cursor-pointer items-center justify-between gap-2 text-start"
@@ -118,8 +161,12 @@ export function RemoteSelect({
         <ChevronDown className="size-4 shrink-0 text-muted" aria-hidden />
       </button>
 
-      {open && (
-        <div className="absolute start-0 end-0 top-full z-40 mt-1.5 overflow-hidden rounded-xl border border-line bg-surface shadow-xl">
+      {open && anchor && createPortal(
+        <div
+          ref={panelRef}
+          style={panelStyle(anchor)}
+          className="z-[60] overflow-hidden rounded-xl border border-line bg-surface shadow-xl"
+        >
           <div className="relative border-b border-line p-2">
             <Search className="pointer-events-none absolute start-4 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
             <input
@@ -202,7 +249,8 @@ export function RemoteSelect({
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
       {error && <p className="text-xs text-danger">{error}</p>}

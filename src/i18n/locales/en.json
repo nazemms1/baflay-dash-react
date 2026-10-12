@@ -84,7 +84,8 @@
     "body": "This account is registered as a customer. The dashboard requires an admin account with assigned permissions."
   },
   "shell": {
-    "branch": "Branch: {{name}}"
+    "branch": "Branch: {{name}}",
+    "buildDate": "Build date: {{date}}"
   },
   "notFound": {
     "title": "Page not found",
@@ -95,7 +96,14 @@
     "unexpected": "Something went wrong. Please try again.",
     "sessionExpired": "Your session has expired. Please sign in again.",
     "forbidden": "You don't have permission to do this.",
-    "backToLogin": "Back to sign in"
+    "backToLogin": "Back to sign in",
+    "boundaryTitle": "Something unexpected happened",
+    "boundaryMessage": "Sorry, this screen stopped working. Reload the page; if it keeps happening, contact the technical team.",
+    "reload": "Reload page",
+    "goHome": "Go to home",
+    "configTitle": "The app is not configured yet",
+    "configMessage": "The server address has not been set. Please contact the technical team.",
+    "configDevHint": "Add VITE_API_URL to the .env file, then restart the dev server."
   },
   "dashboard": {
     "title": "Overview",
@@ -729,7 +737,19 @@
     "serverData": "Server data (for review)",
     "downloadPdf": "Download PDF",
     "preparingPdf": "Preparing file…",
-    "pdfFailed": "Could not create the PDF. Try again."
+    "pdfFailed": "Could not create the PDF. Try again.",
+    "title": "Order invoice",
+    "customerPhone": "Customer phone",
+    "currency": "Currency",
+    "distance": "Distance",
+    "km": "km",
+    "sectionCustomer": "Customer",
+    "sectionOrder": "Order",
+    "sectionDelivery": "Delivery",
+    "sectionTimeline": "Delivery tracking",
+    "sectionFailure": "Delivery failed",
+    "thanks": "Thank you for your order",
+    "printedAt": "Printed {{date}}"
   },
   "ordersPage": {
     "noAccess": "You don't have permission to view orders.",
@@ -771,7 +791,11 @@
     "soundOn": "Turn on new-order sound",
     "soundOff": "Turn off sound",
     "soundHint": "The list refreshes every 25 seconds, and a chime plays when a new order arrives.",
-    "newOrders": "{{count}} new orders arrived"
+    "newOrdersTitle_one": "New order",
+    "newOrdersTitle_other": "{{count}} new orders",
+    "newOrdersHint": "The list is up to date",
+    "newOrdersView": "View latest",
+    "newOrdersDismiss": "Dismiss"
   },
   "crop": {
     "title": "Crop image",
@@ -1022,6 +1046,7 @@
       "none": "No driver",
       "noDrivers": "No drivers in this branch.",
       "needsDriver": "Awaiting driver",
+      "otherBranch": "Other branch",
       "change": "Change driver",
       "assign": "Assign driver"
     },
