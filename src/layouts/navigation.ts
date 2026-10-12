@@ -1,4 +1,5 @@
 import {
+  Bike,
   BookOpen,
   Carrot,
   ClipboardList,
@@ -16,6 +17,7 @@ import {
   Store,
   Tags,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -64,6 +66,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "orders", path: "/orders", icon: ShoppingBag, prefix: "admin.orders" },
       { key: "createOrder", path: "/create-order", icon: ShoppingCart, permission: "admin.orders.counter.store" },
       { key: "orderExtras", path: "/order-extras", icon: PlusCircle, permission: "order-extras.show" },
+      { key: "driverOrders", path: "/driver-orders", icon: Bike, prefix: "driver.orders" },
+      { key: "driverAccounts", path: "/driver-accounts", icon: Wallet, permission: "admin.orders.driver-report" },
     ],
   },
   {

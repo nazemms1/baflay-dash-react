@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Download, Printer } from "lucide-react";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Bars";
 import { ErrorState } from "@/components/ui/States";
 import { currentLanguage } from "@/i18n";
+import { asRecord, toText } from "@/lib/coerce";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { orderAdmin, type Named } from "@/services";
 import { StatusBadge } from "./StatusBadge";
@@ -105,6 +106,7 @@ export function OrderInvoice({ record }: { record: Named }) {
           {model.orderType === "delivery" && (
             <Info label={t("orderInvoice.address")} value={model.address || "—"} wide />
           )}
+          {model.orderType === "delivery" && <DeliveryDetails record={record} />}
           {model.notes && <Info label={t("orderInvoice.notes")} value={model.notes} wide />}
         </dl>
 
@@ -187,7 +189,51 @@ export function OrderInvoice({ record }: { record: Named }) {
   );
 }
 
-function Info({ label, value, wide }: { label: string; value: string; wide?: boolean }) {
+/** مسار التوصيل: السائق وأوقات الإسناد والاستلام والتسليم، وسبب تعذّر التسليم إن وُجد، ورابط الخرائط. */
+function DeliveryDetails({ record }: { record: Named }) {
+  const { t } = useTranslation();
+  const driver = asRecord(record.driver);
+  const driverName = toText(driver.name);
+  const driverPhone = toText(driver.phone);
+  const failureReason = toText(record.delivery_failed_reason);
+  const failureNote = toText(record.delivery_failed_note);
+  const mapUrl = toText(record.maps_url);
+
+  return (
+    <>
+      <Info
+        label={t("drivers.details.driver")}
+        value={driverName ? `${driverName}${driverPhone ? ` · ${driverPhone}` : ""}` : t("drivers.assign.none")}
+      />
+      <Info label={t("drivers.details.assignedAt")} value={formatDateTime(toText(record.assigned_at) || null)} />
+      <Info label={t("drivers.details.pickedUpAt")} value={formatDateTime(toText(record.picked_up_at) || null)} />
+      <Info label={t("drivers.details.deliveredAt")} value={formatDateTime(toText(record.delivered_at) || null)} />
+      {failureReason && (
+        <Info
+          label={t("drivers.details.failure")}
+          value={t(`deliveryFailure.reasons.${failureReason}`, { defaultValue: failureReason })}
+        />
+      )}
+      {failureReason && (
+        <Info label={t("drivers.details.failedAt")} value={formatDateTime(toText(record.delivery_failed_at) || null)} />
+      )}
+      {failureNote && <Info label={t("drivers.details.failureNote")} value={failureNote} wide />}
+      {mapUrl && (
+        <Info
+          label={t("drivers.details.location")}
+          value={
+            <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="text-secondary hover:underline">
+              {t("drivers.card.openMap")}
+            </a>
+          }
+          wide
+        />
+      )}
+    </>
+  );
+}
+
+function Info({ label, value, wide }: { label: string; value: ReactNode; wide?: boolean }) {
   return (
     <div className={wide ? "sm:col-span-2 lg:col-span-3" : undefined}>
       <dt className="text-xs text-muted">{label}</dt>

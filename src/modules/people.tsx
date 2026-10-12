@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type { CrudModule, OptionSource } from "@/components/crud/types";
+import { DRIVER_ROLE } from "@/features/drivers/permissions";
 import { toPage } from "@/lib/http/envelope";
 import { branches, contactUs, permissionCatalog, roles, users, type Named } from "@/services";
 import { UserRowActions } from "@/features/users/UserActions";
@@ -14,8 +15,11 @@ const DELETE = ["destroy", "delete"] as const;
 /**
  * المستخدمون: كلمة المرور مطلوبة عند الإنشاء ومعطّلة إلا عند الكتابة عند
  * التعديل. الحقلان يحملان المفتاح نفسه، ويظهر أحدهما حسب الوضع.
+ *
+ * مدير الفرع لا يرسل الفرع: الخادم يضع المستخدم الجديد في فرع مديره، ويرفض أي فرع آخر
+ * بـ `outside_your_branch`، فيُخفى حقل الفرع عنه كلياً ولا يرسل قيمته.
  */
-export const usersModule = (t: TFunction): CrudModule<Named> => ({
+export const usersModule = (t: TFunction, scoped = false): CrudModule<Named> => ({
   id: "users",
   titleKey: "nav.users",
   api: {
@@ -33,15 +37,33 @@ export const usersModule = (t: TFunction): CrudModule<Named> => ({
     { kind: "phone", key: "phone", label: t("crud.field.phone"), ltr: true },
     { kind: "password", key: "password", label: t("crud.field.password"), required: true, createOnly: true },
     { kind: "password", key: "password", label: t("crud.field.newPassword"), editOnly: true },
+    // الخادم يطابق التأكيد مع كلمة المرور، فيُطلب التأكيد في الوضعين.
+    { kind: "password", key: "password_confirmation", label: t("profile.confirmPassword"), required: true, createOnly: true },
+    { kind: "password", key: "password_confirmation", label: t("profile.confirmPassword"), editOnly: true },
+    {
+      kind: "select",
+      key: "gender",
+      label: t("profile.gender"),
+      required: true,
+      options: [
+        { value: "male", label: t("profile.male") },
+        { value: "female", label: t("profile.female") },
+      ],
+    },
+    { kind: "date", key: "date_of_birth", label: t("profile.dateOfBirth"), required: true },
     { kind: "image", key: "picture", label: t("crud.field.picture") },
     // خط العرض في `location_x` وخط الطول في `location_y`، كما في الفروع.
     { kind: "location", key: "location_x", lngKey: "location_y", label: t("users.userLocation") },
-    {
-      kind: "select",
-      key: "branch_id",
-      label: t("crud.field.branch"),
-      options: remoteSource("branches", branches, (row) => String((row as Record<string, unknown>).name_ar ?? (row as Record<string, unknown>).name ?? row.id)),
-    },
+    ...(scoped
+      ? []
+      : [
+          {
+            kind: "select" as const,
+            key: "branch_id",
+            label: t("crud.field.branch"),
+            options: remoteSource("branches", branches, (row) => String((row as Record<string, unknown>).name_ar ?? (row as Record<string, unknown>).name ?? row.id)),
+          },
+        ]),
   ],
   columns: [
     textColumn<Named>("name", t("crud.field.name")),
@@ -79,6 +101,12 @@ export const usersModule = (t: TFunction): CrudModule<Named> => ({
         { value: "with", label: t("users.withDeleted") },
         { value: "only", label: t("users.onlyDeleted") },
       ],
+    },
+    // السائقون فقط: قائمة اختيار السائق في الطلب تعتمد على هذا الفلتر نفسه.
+    {
+      key: "role",
+      label: t("users.driverFilter"),
+      options: [{ value: DRIVER_ROLE, label: t("users.driversOnly") }],
     },
   ],
   rowActions: UserRowActions,

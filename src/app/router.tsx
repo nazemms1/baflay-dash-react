@@ -4,6 +4,8 @@ import { RequireSession } from "@/features/auth/RequireSession";
 import { PendingModulePage } from "@/pages/PendingModulePage";
 import {
   CreateOrderPage,
+  DriverAccountsPage,
+  DriverOrdersPage,
   HomeRoute,
   IngredientsPage,
   OrderExtrasPage,
@@ -23,7 +25,8 @@ import {
   itemsModule,
   menusModule,
 } from "@/modules/catalog";
-import { contactUsModule, rolesModule, usersModule } from "@/modules/people";
+import { contactUsModule, rolesModule } from "@/modules/people";
+import { UsersRoute } from "@/modules/UsersRoute";
 import { galleriesModule } from "@/modules/content";
 import { customerSurveysModule, surveysModule } from "@/modules/surveys";
 import { gameModule } from "@/modules/game";
@@ -38,7 +41,7 @@ const CRUD_ROUTES = [
   { path: "ingredients", element: <IngredientsPage /> },
   { path: "menus", element: <ModuleRoute build={menusModule} /> },
   { path: "galleries", element: <ModuleRoute build={galleriesModule} /> },
-  { path: "users", element: <ModuleRoute build={usersModule} /> },
+  { path: "users", element: <UsersRoute /> },
   { path: "roles", element: <ModuleRoute build={rolesModule} /> },
   { path: "contact-us", element: <ModuleRoute build={contactUsModule} /> },
   { path: "survey-templates", element: <ModuleRoute build={surveysModule} /> },
@@ -47,6 +50,8 @@ const CRUD_ROUTES = [
   { path: "game-dashboard", element: <ModuleRoute build={gameModule} /> },
   { path: "create-order", element: <CreateOrderPage /> },
   { path: "order-extras", element: <OrderExtrasPage /> },
+  { path: "driver-orders", element: <DriverOrdersPage /> },
+  { path: "driver-accounts", element: <DriverAccountsPage /> },
 ];
 
 const IMPLEMENTED = new Set(["/", ...CRUD_ROUTES.map((route) => `/${route.path}`)]);

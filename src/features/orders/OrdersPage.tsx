@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Eye, Lock, RotateCcw } from "lucide-react";
+import { Bell, BellOff, ChevronDown, Eye, Lock, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/Fields";
 import { Select } from "@/components/ui/Select";
+import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { Skeleton } from "@/components/ui/Bars";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { useBranchScope, usePermissions } from "@/features/auth/hooks";
+import { ADMIN_DRIVER_PERMISSIONS } from "@/features/drivers/permissions";
+import { useDriverOptions } from "@/features/drivers/useDriverOptions";
 import { currentLanguage } from "@/i18n";
 import { asRecord, toNumber, toText } from "@/lib/coerce";
 import { formatDateTime, formatMoney, formatNumber } from "@/lib/format";
@@ -20,6 +23,9 @@ import { OrderInvoice } from "./OrderInvoice";
 import { StatusPicker } from "./StatusPicker";
 import { statusDotClass } from "./statusTone";
 import { ORDER_STATUSES, isFinalOrder, serverLabelOf } from "./orderStatus";
+import { AssignDriverDialog } from "./AssignDriverDialog";
+import { canAssignDriver } from "./driverAssignment";
+import { useNewOrderAlert } from "./newOrderAlert";
 
 type OrderType = "delivery" | "pickup";
 
@@ -53,14 +59,21 @@ export function OrdersPage() {
   const [branchFilter, setBranchFilter] = useState<number | null>(null);
   const [date, setDate] = useState("");
   const [maxRating, setMaxRating] = useState("");
+  // قيمة واحدة لفلتر السائق: "needs" للطلبات بلا سائق، أو معرّف سائق بعينه، أو فارغ للكل.
+  const [driverChoice, setDriverChoice] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [viewing, setViewing] = useState<Named | null>(null);
   const [picking, setPicking] = useState<Named | null>(null);
+  const [assigning, setAssigning] = useState<Named | null>(null);
 
   const canList = permissions.has("admin.orders.index");
   const canView = permissions.has("admin.orders.show");
   const canChangeStatus = permissions.has("admin.orders.status.update");
+  const canAssign = permissions.has(ADMIN_DRIVER_PERMISSIONS.assign);
+  const drivers = useDriverOptions(canList);
+  // تنبيه الطلبات الجديدة: الاستعلام الدوري يعمل مع الصفحة، والصوت اختياري.
+  const alert = useNewOrderAlert(canList);
   // المستخدم المرتبط بفرع يرى فرعه فقط، والخادم يفرض ذلك أيضاً.
   const branchId = scope.isBranchScoped ? scope.branchId : branchFilter;
 
@@ -70,6 +83,8 @@ export function OrdersPage() {
     branch_id: branchId ?? undefined,
     date: date || undefined,
     max_rating: maxRating || undefined,
+    needs_driver: driverChoice === "needs" ? 1 : undefined,
+    driver_id: /^\d+$/.test(driverChoice) ? Number(driverChoice) : undefined,
   };
   const typed = typeFilter !== "";
 
@@ -124,6 +139,7 @@ export function OrdersPage() {
     setBranchFilter(null);
     setDate("");
     setMaxRating("");
+    setDriverChoice("");
     setPage(1);
   };
 
@@ -136,9 +152,23 @@ export function OrdersPage() {
           <h2 className="text-xl font-bold text-ink">{t("nav.orders")}</h2>
           {meta && <p className="text-sm tabular-nums text-muted">{t("ordersPage.count", { count: formatNumber(meta.total) })}</p>}
         </div>
+        <button
+          type="button"
+          onClick={alert.toggleSound}
+          aria-pressed={alert.soundOn}
+          title={t("ordersPage.soundHint")}
+          className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-medium ring-1 ring-line transition hover:ring-primary"
+        >
+          {alert.soundOn ? (
+            <Bell className="size-4 text-secondary" aria-hidden />
+          ) : (
+            <BellOff className="size-4 text-muted" aria-hidden />
+          )}
+          {alert.soundOn ? t("ordersPage.soundOff") : t("ordersPage.soundOn")}
+        </button>
       </header>
 
-      <section className="grid gap-3 rounded-2xl border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-6">
+      <section className="grid gap-3 rounded-2xl border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-7">
         <SelectField
           label={t("ordersPage.statusFilter")}
           options={ORDER_STATUSES.map((value) => ({ value, label: t(`orders.status.${value}`) }))}
@@ -170,6 +200,19 @@ export function OrdersPage() {
           placeholder={t("ordersPage.allBranches")}
           onChange={(value) => {
             setBranchFilter(value === null ? null : Number(value));
+            setPage(1);
+          }}
+        />
+        <SelectField
+          label={t("ordersPage.driverFilter")}
+          options={[
+            { value: "needs", label: t("drivers.assign.needsDriver") },
+            ...(drivers.data ?? []).map((driver) => ({ value: driver.id, label: driver.name })),
+          ]}
+          value={driverChoice || null}
+          placeholder={t("ordersPage.allDrivers")}
+          onChange={(value) => {
+            setDriverChoice(value === null ? "" : String(value));
             setPage(1);
           }}
         />
@@ -209,13 +252,14 @@ export function OrdersPage() {
           <EmptyState>{t("ordersPage.empty")}</EmptyState>
         ) : (
           <div className="overflow-x-auto rounded-t-2xl">
-            <table className="w-full min-w-[980px] text-sm">
+            <table className="w-full min-w-[1080px] text-sm">
               <thead className="bg-secondary text-xs font-semibold text-surface">
                 <tr>
                   <th className="px-4 py-3 text-start font-medium">{t("orders.table.number")}</th>
                   <th className="px-4 py-3 text-start font-medium">{t("orders.table.created")}</th>
                   <th className="px-4 py-3 text-start font-medium">{t("orders.table.customer")}</th>
                   <th className="px-4 py-3 text-start font-medium">{t("ordersPage.colType")}</th>
+                  <th className="px-4 py-3 text-start font-medium">{t("ordersPage.colDriver")}</th>
                   <th className="px-4 py-3 text-start font-medium">{t("ordersPage.colBranch")}</th>
                   <th className="px-4 py-3 text-end font-medium">{t("orders.table.total")}</th>
                   <th className="px-4 py-3 text-start font-medium">{t("ordersPage.colRating")}</th>
@@ -250,6 +294,9 @@ export function OrdersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <TypeChip type={typeOf(row)} />
+                      </td>
+                      <td className="px-4 py-3">
+                        <DriverCell row={row} canAssign={canAssign} onAssign={() => setAssigning(row)} />
                       </td>
                       <td className="px-4 py-3 text-ink-soft">
                         {typeof row.branch === "string"
@@ -309,6 +356,8 @@ export function OrdersPage() {
 
       {picking && <StatusPicker row={picking} onClose={() => setPicking(null)} />}
 
+      {assigning && <AssignDriverDialog row={assigning} onClose={() => setAssigning(null)} />}
+
       {viewing && (
         <Dialog open onClose={() => setViewing(null)} size="lg" title={refOf(viewing)}>
           <OrderInvoice record={viewing} />
@@ -342,6 +391,37 @@ function StatusTrigger({ row, canChange, onOpen }: { row: Named; canChange: bool
         canChange && <ChevronDown className="size-3.5 shrink-0 text-muted" aria-hidden />
       )}
     </button>
+  );
+}
+
+/**
+ * عمود السائق: اسم السائق، أو تنبيه «بانتظار سائق» لتوصيل بلا سائق. زر الإسناد يظهر
+ * لمن يملك صلاحيته، وللطلب الذي ما زال قبل الاستلام من الفرع.
+ */
+function DriverCell({ row, canAssign, onAssign }: { row: Named; canAssign: boolean; onAssign: () => void }) {
+  const { t } = useTranslation();
+  if (toText(row.delivery_type) !== "delivery") return <span className="text-muted">—</span>;
+
+  const name = toText(asRecord(row.driver).name);
+  const editable = canAssign && canAssignDriver(row);
+
+  return (
+    <div className="space-y-1">
+      {name ? (
+        <p className="font-medium text-ink">{name}</p>
+      ) : (
+        <Badge tone="warn">{t("drivers.assign.needsDriver")}</Badge>
+      )}
+      {editable && (
+        <button
+          type="button"
+          onClick={onAssign}
+          className="cursor-pointer text-xs font-medium text-secondary hover:underline"
+        >
+          {name ? t("drivers.assign.change") : t("drivers.assign.assign")}
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -6,5 +6,6 @@ export * from "./resource";
 export * from "./geography";
 export * from "./catalog";
 export * from "./orders";
+export * from "./drivers";
 export * from "./people";
 export * from "./surveys-answers";

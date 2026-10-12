@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
+import { env } from "@/config/env";
 import { Dialog } from "@/components/ui/Dialog";
 import {
   PREVIEW_WIDTH,
@@ -9,6 +11,7 @@ import {
   frameSize,
   geometryOf,
   renderCrop,
+  sourceInfoOfUrl,
   type Offset,
   type Size,
 } from "./cropMath";
@@ -28,16 +31,38 @@ const ratioIdOf = (ratio: number | null): RatioId => RATIOS.find((option) => opt
 const MAX_ZOOM = 4;
 
 /**
- * نافذة قص الصورة قبل إرسالها: يحرّك المستخدم الصورة داخل إطار بنسبة محددة، ويكبّرها،
- * ويرى معاينة النتيجة الفعلية، ثم يطبّق القص فيحصل على ملف جديد بالمنطقة المختارة وحدها.
+ * الرابط الذي تُقرأ منه الصورة للقص. في التطوير تُطلب صور الخادم من الموقع نفسه عبر الوكيل،
+ * فيقرؤها المتصفح دون قيود المصدر المختلف. في الإنتاج يبقى الرابط كما هو.
+ */
+function readableUrl(url: string): string {
+  if (!import.meta.env.DEV) return url;
+  try {
+    const target = new URL(url);
+    if (target.origin === new URL(env.apiUrl).origin && target.pathname.startsWith("/storage/")) {
+      return `${target.pathname}${target.search}`;
+    }
+  } catch {
+    // رابط غير صالح يبقى كما هو، فيظهر تنبيه القص عند فشل التحميل.
+  }
+  return url;
+}
+
+/**
+ * نافذة قص الصورة: تُفتح بملف محلي اختاره المستخدم للتو، أو بصورة محفوظة في الخادم فتُقص من
+ * جديد. يحرّك المستخدم الصورة داخل إطار بنسبة محددة، ويكبّرها، ويرى معاينة النتيجة الفعلية،
+ * ثم يطبّق القص فيحصل على ملف جديد بالمنطقة المختارة وحدها.
  */
 export function ImageCropDialog({
   file,
+  url,
   defaultRatio,
   onCancel,
   onConfirm,
 }: {
-  file: File;
+  /** ملف محلي. يُعطى هذا أو `url`. */
+  file?: File;
+  /** رابط صورة محفوظة في الخادم. لا تُقص إلا إن سمح الخادم بقراءتها من الموقع. */
+  url?: string;
   defaultRatio: number | null;
   onCancel: () => void;
   onConfirm: (cropped: File) => void;
@@ -59,11 +84,14 @@ export function ImageCropDialog({
   const frame = frameSize(ratio ?? (natural ? natural.width / natural.height : 1));
   const geometry = natural ? geometryOf(natural, frame, zoom, offset) : null;
   const dpr = typeof window === "undefined" ? 1 : Math.min(2, window.devicePixelRatio || 1);
+  const failedText = t(url ? "crop.failedRemote" : "crop.failed");
 
-  // تحميل الصورة من الملف. الرابط المؤقت يُلغى عند الإغلاق أو تغيير الملف.
+  // تحميل الصورة: من ملف محلي عبر رابط مؤقت، أو من الخادم. الرابط المؤقت يُلغى عند الإغلاق.
   useEffect(() => {
-    const url = URL.createObjectURL(file);
+    const objectUrl = file ? URL.createObjectURL(file) : null;
     const loaded = new Image();
+    // صورة الخادم تُطلب كطلب من مصدر آخر، فيُسمح بتصديرها بعد القص إن أذن الخادم بذلك.
+    if (!file) loaded.crossOrigin = "anonymous";
     let alive = true;
     loaded.onload = () => {
       if (alive) setImage(loaded);
@@ -71,12 +99,12 @@ export function ImageCropDialog({
     loaded.onerror = () => {
       if (alive) setFailed(true);
     };
-    loaded.src = url;
+    loaded.src = objectUrl ?? (url ? readableUrl(url) : "");
     return () => {
       alive = false;
-      URL.revokeObjectURL(url);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [file]);
+  }, [file, url]);
 
   // رسم الإطار والمعاينة كلما تغيّر شيء في القص.
   useEffect(() => {
@@ -127,9 +155,11 @@ export function ImageCropDialog({
     if (!image || !natural || !geometry) return;
     setBusy(true);
     try {
-      onConfirm(await exportCrop(image, frame, geometry, file));
+      onConfirm(await exportCrop(image, frame, geometry, file ?? sourceInfoOfUrl(url ?? "")));
     } catch {
+      // الخادم الذي لا يسمح بقراءة الصورة يمنع تصديرها بعد القص، فتظهر الرسالة الصحيحة للمستخدم.
       setFailed(true);
+      toast.error(failedText);
     } finally {
       setBusy(false);
     }
@@ -203,8 +233,8 @@ export function ImageCropDialog({
                 }}
               />
               {!image && (
-                <div className="absolute inset-0 grid place-items-center rounded-lg bg-canvas text-sm text-muted">
-                  {failed ? t("crop.failed") : t("crop.loading")}
+                <div className="absolute inset-0 grid place-items-center rounded-lg bg-canvas p-4 text-center text-sm text-muted">
+                  {failed ? failedText : t("crop.loading")}
                 </div>
               )}
             </div>

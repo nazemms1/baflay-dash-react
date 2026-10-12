@@ -68,6 +68,12 @@ export function defaultValues(fields: FieldDef[], record: RecordLike | null): Va
         values[field.key] = list.map(idOf).filter((id): id is number | string => id !== null);
         break;
       }
+      case "date": {
+        // الخادم يرسل التاريخ أحياناً مع الوقت، وحقل التاريخ لا يقرأ إلا YYYY-MM-DD.
+        const raw = source[field.key];
+        values[field.key] = typeof raw === "string" ? raw.slice(0, 10) : "";
+        break;
+      }
       case "image":
         values[field.key] = null;
         break;
@@ -162,6 +168,9 @@ export function buildPayload(fields: FieldDef[], values: Values, mode: Mode): Va
         break;
       case "select":
         payload[field.key] = values[field.key] ?? null;
+        break;
+      case "date":
+        payload[field.key] = nullIfEmpty(values[field.key]);
         break;
       case "permissions":
         // الخادم يقبل أسماء الصلاحيات نصوصاً فقط، فنحوّل كل قيمة إلى نص قبل الإرسال.

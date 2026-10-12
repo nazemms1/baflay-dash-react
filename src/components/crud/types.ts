@@ -60,6 +60,8 @@ export type FieldDef =
       notBelow?: string;
     })
   | (Common & { kind: "textarea" })
+  // تاريخ بصيغة YYYY-MM-DD، كتاريخ الميلاد.
+  | (Common & { kind: "date" })
   | (Common & { kind: "bilingual"; multiline?: boolean })
   | (Common & { kind: "select"; options: Option[] | OptionSource | RemoteSource; placeholder?: string; searchable?: boolean })
   | (Common & { kind: "multiselect"; options: Option[] | OptionSource })

@@ -15,27 +15,40 @@ import { toApiError } from "@/lib/http/errors";
 import { roles, users, type Named } from "@/services";
 
 /**
- * الأدوار تُبحث في الخادم عشرين في الصفحة. قيمة الخيار هي اسم الدور نفسه، فهو ما يستقبله
- * الخادم عند إسناد الأدوار، ولا حاجة لربط الفهارس بينهما.
+ * الأدوار تُبحث في الخادم عشرين في الصفحة. قيمة الخيار هي معرّف الدور، لأن الخادم يطلب أعداداً
+ * في `roles` (`roles.0 must be an integer`).
  */
 const ROLE_OPTIONS: RemoteSource = {
-  cacheKey: "roles-names",
+  cacheKey: "roles-ids",
   search: async (term, page, signal) => {
     const result = await roles.list({ page, per_page: 20, ...(term ? { search: term } : {}) }, signal);
     return {
       items: result.items.map((role) => ({
-        value: toText(role.name),
+        value: Number(role.id),
         label: toText(role.label) || toText(role.name),
       })),
       lastPage: result.meta.lastPage,
     };
   },
   byId: async (value, signal) => {
-    const result = await roles.list({ page: 1, per_page: 20, search: String(value) }, signal);
-    const found = result.items.find((role) => toText(role.name) === String(value));
-    return { value, label: found ? toText(found.label) || String(value) : String(value) };
+    const role = await roles.get(value, signal);
+    return { value, label: toText(role.label) || toText(role.name) || String(value) };
   },
 };
+
+/**
+ * معرّف الدور من استجابة الحساب. إن جاء الدور كائناً فيه `id` نأخذه، وإن جاء اسماً نبحث عن
+ * الدور بهذا الاسم لنحصل على معرّفه.
+ */
+async function roleIdOf(entry: unknown, signal?: AbortSignal): Promise<number | null> {
+  const record = asRecord(entry);
+  if (record.id !== undefined && record.id !== null) return Number(record.id);
+  const name = typeof entry === "string" ? entry : toText(record.name);
+  if (!name) return null;
+  const found = await roles.list({ page: 1, per_page: 20, search: name }, signal);
+  const match = found.items.find((role) => toText(role.name) === name);
+  return match ? Number(match.id) : null;
+}
 
 /** أزرار الصف: للحساب النشط الأدوار، وللحساب المحذوف الاستعادة والحذف النهائي. */
 export function UserRowActions({ row }: { row: Named }) {
@@ -49,7 +62,9 @@ function AccessAction({ row }: { row: Named }) {
   const permissions = usePermissions();
   const [open, setOpen] = useState(false);
 
-  if (!permissions.has("access.update")) return null;
+  // عرض أدوار المستخدم يحتاج صلاحية الرؤية، فالزر لا يظهر بدونها حتى لو كان التعديل متاحاً.
+  if (!permissions.has("access.show")) return null;
+  const canEdit = permissions.has("access.update");
 
   return (
     <>
@@ -62,26 +77,40 @@ function AccessAction({ row }: { row: Named }) {
       >
         <ShieldCheck className="size-4" aria-hidden />
       </button>
-      {open && <AccessDialog userId={row.id} userName={String(row.name ?? `#${row.id}`)} onClose={() => setOpen(false)} />}
+      {open && (
+        <AccessDialog userId={row.id} userName={String(row.name ?? `#${row.id}`)} canEdit={canEdit} onClose={() => setOpen(false)} />
+      )}
     </>
   );
 }
 
-function AccessDialog({ userId, userName, onClose }: { userId: number | string; userName: string; onClose: () => void }) {
+function AccessDialog({
+  userId,
+  userName,
+  canEdit,
+  onClose,
+}: {
+  userId: number | string;
+  userName: string;
+  /** التعديل يحتاج صلاحية التعديل، ومن يملك الرؤية وحدها يرى الأدوار للقراءة فقط. */
+  canEdit: boolean;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [draft, setDraft] = useState<string[] | null>(null);
+  const [draft, setDraft] = useState<number[] | null>(null);
 
   const current = useQuery({
     queryKey: ["user-access", userId],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const body = asRecord(await users.getAccess(userId));
       const list = Array.isArray(body) ? (body as unknown[]) : asArray(body.roles);
-      return list.map((entry) => (typeof entry === "string" ? entry : toText(asRecord(entry).name)));
+      const ids = await Promise.all(list.map((entry) => roleIdOf(entry, signal)));
+      return ids.filter((id): id is number => id !== null);
     },
   });
 
-  // الأدوار المختارة هي أسماؤها، فالحفظ يرسلها كما هي.
+  // الأدوار المختارة معرّفاتها، والخادم يستقبلها أعداداً.
   const selected = draft ?? current.data ?? [];
 
   const save = useMutation({
@@ -105,10 +134,16 @@ function AccessDialog({ userId, userName, onClose }: { userId: number | string; 
       description={t("access.description")}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={save.isPending}>{t("common.cancel")}</Button>
-          <Button onClick={() => save.mutate()} disabled={loading || save.isPending} className="bg-primary text-ink hover:bg-primary/90">
-            {save.isPending ? t("crud.saving") : t("crud.save")}
-          </Button>
+          {canEdit ? (
+            <>
+              <Button variant="secondary" onClick={onClose} disabled={save.isPending}>{t("common.cancel")}</Button>
+              <Button onClick={() => save.mutate()} disabled={loading || save.isPending} className="bg-primary text-ink hover:bg-primary/90">
+                {save.isPending ? t("crud.saving") : t("crud.save")}
+              </Button>
+            </>
+          ) : (
+            <Button variant="secondary" onClick={onClose}>{t("common.close")}</Button>
+          )}
         </>
       }
     >
@@ -117,7 +152,15 @@ function AccessDialog({ userId, userName, onClose }: { userId: number | string; 
         <ErrorState message={t("errors.unexpected")} onRetry={() => void current.refetch()} error={current.error} />
       )}
       {current.isSuccess && (
-        <RemoteCheckList source={ROLE_OPTIONS} selected={selected} onChange={(next) => setDraft(next.map(String))} />
+        <div className="space-y-3">
+          {!canEdit && <p className="text-sm text-muted">{t("access.viewOnly")}</p>}
+          <RemoteCheckList
+            source={ROLE_OPTIONS}
+            selected={selected}
+            onChange={(next) => setDraft(next.map(Number))}
+            readOnly={!canEdit}
+          />
+        </div>
       )}
     </Dialog>
   );

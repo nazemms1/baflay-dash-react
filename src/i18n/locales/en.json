@@ -57,7 +57,9 @@
     "game": "Game dashboard",
     "myb": "MYB",
     "createOrder": "Create order",
-    "orderExtras": "Order extras"
+    "orderExtras": "Order extras",
+    "driverOrders": "Driver orders",
+    "driverAccounts": "Driver accounts"
   },
   "auth": {
     "heroTitle": "Everything your team needs on one screen",
@@ -369,7 +371,8 @@
     "showingOf": "Showing {{shown}} of {{total}}",
     "loadMore": "Load more",
     "deliveryOn": "Delivery",
-    "deliveryOff": "Pickup only"
+    "deliveryOff": "Pickup only",
+    "cropImage": "Crop image"
   },
   "surveys": {
     "types": {
@@ -411,7 +414,8 @@
       "on_the_way": "On the way",
       "completed": "Completed",
       "cancelled": "Cancelled",
-      "rejected": "Rejected"
+      "rejected": "Rejected",
+      "delivery_failed": "Delivery failed"
     },
     "filters": {
       "status": "Filter by status"
@@ -597,7 +601,8 @@
     "open": "User access",
     "title": "Access: {{name}}",
     "description": "The roles this account holds. Roles you do not select are removed.",
-    "saved": "Access saved"
+    "saved": "Access saved",
+    "viewOnly": "View only: you can't change this user's roles."
   },
   "users": {
     "trashed": "Deleted",
@@ -620,7 +625,9 @@
     "ownerOfOrders": "and has {{count}} orders.",
     "ownerOfOrders_one": "and has 1 order.",
     "ownerOfOrders_other": "and has {{count}} orders.",
-    "noOrders": "and has no orders."
+    "noOrders": "and has no orders.",
+    "driverFilter": "Role",
+    "driversOnly": "Drivers only"
   },
   "menuDuplicate": {
     "open": "Copy menu to another branch",
@@ -755,7 +762,16 @@
     "nextSteps": "Next step",
     "endOrder": "End the order",
     "endReject": "Reject order",
-    "endCancel": "Cancel order"
+    "endCancel": "Cancel order",
+    "colDriver": "Driver",
+    "driverFilter": "Driver",
+    "allDrivers": "All drivers",
+    "endFailed": "Delivery failed",
+    "failOk": "Yes, record delivery failed",
+    "soundOn": "Turn on new-order sound",
+    "soundOff": "Turn off sound",
+    "soundHint": "The list refreshes every 25 seconds, and a chime plays when a new order arrives.",
+    "newOrders": "{{count}} new orders arrived"
   },
   "crop": {
     "title": "Crop image",
@@ -771,7 +787,8 @@
     "frame": "Crop frame",
     "apply": "Apply crop",
     "loading": "Opening the image…",
-    "failed": "Could not open or crop the image. Choose another file."
+    "failed": "Could not open or crop the image. Choose another file.",
+    "failedRemote": "This image can't be cropped because the image server doesn't let this site read it. The server must allow reading the image path."
   },
   "deliveryPreview": {
     "title": "Delivery fee preview",
@@ -899,5 +916,160 @@
     "statusDone": "Done",
     "markDone": "Mark as done",
     "doneSaved": "Order marked as done"
+  },
+  "deliveryFailure": {
+    "reason": "Reason for failed delivery",
+    "pick": "Choose a reason",
+    "note": "Note",
+    "noteRequired": "Explain the reason (required)",
+    "reasons": {
+      "customer_refused": "Customer refused the order",
+      "not_home": "Customer not home",
+      "wrong_address": "Wrong address",
+      "unreachable": "Customer unreachable",
+      "other": "Other"
+    }
+  },
+  "drivers": {
+    "noAccess": "You don't have access to the driver screen.",
+    "title": "Deliveries",
+    "hint": "Pick the order up from the branch, then deliver it to the customer, or record why delivery failed.",
+    "tabs": {
+      "label": "Filter orders",
+      "active": "Active",
+      "done": "Completed",
+      "failed": "Failed",
+      "all": "All"
+    },
+    "summary": {
+      "title": "Today's summary",
+      "cashToHandIn": "Cash to hand in at end of shift",
+      "cashToHandInHint": "Cash from delivered orders only",
+      "cashInTransit": "Cash on orders still on the way",
+      "cashInTransitHint": "Not charged to you yet",
+      "failedCash": "Cash from failed orders",
+      "failedCashHint": "Not on you",
+      "failedCardOrders": "Card orders not delivered",
+      "failedCardHint": "For information only",
+      "delivered": "Delivered",
+      "failed": "Failed",
+      "outNow": "On the way now",
+      "assigned": "Assigned to you"
+    },
+    "card": {
+      "assignedAt": "Assigned",
+      "openMap": "Open in Maps",
+      "details": "Details",
+      "call": "Call customer",
+      "navigate": "Directions"
+    },
+    "actions": {
+      "pickup": "Picked up from branch",
+      "delivered": "Delivered to customer",
+      "failed": "Delivery failed"
+    },
+    "done": {
+      "pickup": "Pickup recorded",
+      "delivered": "Delivery recorded",
+      "failed": "Failed delivery recorded"
+    },
+    "empty": "No orders in this tab for this day.",
+    "confirm": {
+      "deliveredTitle": "Confirm delivery",
+      "deliveredText": "Order {{ref}} will be marked completed after confirmation.",
+      "deliveredOk": "Yes, delivered",
+      "back": "Back",
+      "collectCash": "Collect {{amount}} in cash from the customer before confirming.",
+      "cardPaid": "This order was paid by card; no cash is collected."
+    },
+    "failed": {
+      "title": "Delivery failed",
+      "description": "Choose the reason for order {{ref}}. Its status will be set to delivery failed.",
+      "submit": "Confirm delivery failed"
+    },
+    "details": {
+      "title": "Order details",
+      "driver": "Driver",
+      "customer": "Customer",
+      "address": "Delivery address",
+      "location": "Location",
+      "payment": "Payment",
+      "amount": "Amount",
+      "assignedAt": "Assigned at",
+      "pickedUpAt": "Picked up at",
+      "deliveredAt": "Delivered at",
+      "failedAt": "Failed at",
+      "failure": "Failure reason",
+      "failureNote": "Failure note",
+      "notes": "Notes"
+    },
+    "errors": {
+      "cannotAssign": "This order can't be assigned to a driver: it isn't a delivery or has left the branch.",
+      "notDriverHere": "This account is not a driver of this branch.",
+      "notReadyForPickup": "The kitchen hasn't prepared the order yet.",
+      "notOnTheWay": "This order isn't on the way; it may already be recorded.",
+      "notYourDelivery": "This order isn't assigned to you.",
+      "outsideBranch": "This action is outside your branch."
+    },
+    "assign": {
+      "label": "Driver",
+      "pick": "Choose a driver",
+      "hint": "The driver can only be changed before the order is picked up from the branch.",
+      "submit": "Assign",
+      "unassign": "Remove driver",
+      "done": "Order assigned",
+      "removed": "Driver removed from the order",
+      "none": "No driver",
+      "noDrivers": "No drivers in this branch.",
+      "needsDriver": "Awaiting driver",
+      "change": "Change driver",
+      "assign": "Assign driver"
+    },
+    "accounts": {
+      "title": "Driver accounts",
+      "hint": "Amounts and counts for each driver in each branch for the chosen day.",
+      "noAccess": "You don't have access to driver accounts.",
+      "empty": "No driver data for this day.",
+      "count": "{{count}} drivers",
+      "driver": "Driver",
+      "cashToHandIn": "To hand in",
+      "cashInTransit": "Cash on the way",
+      "failedCash": "Failed cash",
+      "failedCardOrders": "Undelivered card orders",
+      "delivered": "Delivered",
+      "failed": "Failed",
+      "outNow": "On the way now",
+      "assigned": "Assigned",
+      "counts": "Counts",
+      "definitionsTitle": "How the columns are calculated",
+      "def": {
+        "cashToHandIn": "Cash from delivered orders only: what must be handed in at the end of the shift.",
+        "cashInTransit": "Cash from orders still with the driver on the way, not yet charged to them.",
+        "failedCash": "Cash from failed orders, not charged to the driver.",
+        "failedCardOrders": "Card orders not delivered, for information only. There are no refunds.",
+        "counts": "Delivered, failed, assigned and on the way now: counts for follow-up."
+      },
+      "dayRuleTitle": "How the day is counted",
+      "dayRule": "The day is counted from the time the order is assigned. An order assigned at 23:50 and delivered at 00:10 counts toward the day it was assigned.",
+      "allDrivers": "All drivers"
+    },
+    "today": "Today",
+    "refresh": "Refresh",
+    "resultCount": "{{count}} orders",
+    "search": {
+      "label": "Search",
+      "placeholder": "Order number, customer name or phone"
+    },
+    "noMatches": "No orders match your search on this page.",
+    "steps": {
+      "label": "Order steps",
+      "assigned": "Assigned",
+      "picked": "Picked up",
+      "delivered": "Delivered",
+      "failed": "Failed"
+    },
+    "timeline": {
+      "title": "Order timeline"
+    }
   }
 }

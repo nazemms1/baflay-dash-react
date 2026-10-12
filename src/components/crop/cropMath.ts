@@ -97,8 +97,23 @@ const EXTENSION: Record<string, string> = { "image/png": "png", "image/webp": "w
 
 const renamed = (name: string, mime: string) => `${name.replace(/\.[^.]+$/, "") || "image"}.${EXTENSION[mime]}`;
 
+/** المصدر الذي يُقص: نوع الملف واسمه، وهما ما يحدد صيغة الناتج وتسميته. */
+export interface CropSourceInfo {
+  type: string;
+  name: string;
+}
+
+/** نوع الصورة واسمها من رابطها، لأن المتصفح لا يعرفهما قبل قراءتها. الامتداد يحدد الصيغة. */
+export function sourceInfoOfUrl(url: string): CropSourceInfo {
+  const path = url.split(/[?#]/)[0];
+  const name = path.split("/").pop() || "image";
+  const extension = name.split(".").pop()?.toLowerCase();
+  const type = extension === "png" ? "image/png" : extension === "webp" ? "image/webp" : "image/jpeg";
+  return { type, name };
+}
+
 /** يصدّر المنطقة المقصوصة ملفاً جديداً. لا يكبّر الصورة، بل يقصّها بدقتها الأصلية كحد أقصى. */
-export function exportCrop(image: CanvasImageSource, frame: Size, geometry: Geometry, source: File): Promise<File> {
+export function exportCrop(image: CanvasImageSource, frame: Size, geometry: Geometry, source: CropSourceInfo): Promise<File> {
   const mime = outputMime(source.type);
   const { sw } = sourceRect(frame, geometry);
   const canvas = document.createElement("canvas");

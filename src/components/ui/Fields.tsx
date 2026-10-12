@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
-import { ImagePlus, Trash2 } from "lucide-react";
+import { Crop, ImagePlus, Trash2 } from "lucide-react";
 import { ImageCropDialog } from "@/components/crop/ImageCropDialog";
 import { Select } from "./Select";
 
@@ -232,6 +232,7 @@ export function ImageField({
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [picked, setPicked] = useState<File | null>(null);
+  const [cropping, setCropping] = useState(false);
   const preview = file ? URL.createObjectURL(file) : currentUrl ?? null;
 
   const handle = (event: ChangeEvent<HTMLInputElement>) => {
@@ -260,6 +261,16 @@ export function ImageField({
           >
             {t("crud.chooseImage")}
           </button>
+          {(file || currentUrl) && (
+            <button
+              type="button"
+              onClick={() => setCropping(true)}
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-surface px-3 text-sm font-medium ring-1 ring-line hover:ring-secondary"
+            >
+              <Crop className="size-4" aria-hidden />
+              {t("crud.cropImage")}
+            </button>
+          )}
           {file && (
             <button
               type="button"
@@ -272,6 +283,18 @@ export function ImageField({
           )}
         </div>
         <input ref={inputRef} type="file" accept="image/*" onChange={handle} className="hidden" />
+        {cropping && (file || currentUrl) && (
+          <ImageCropDialog
+            file={file ?? undefined}
+            url={file ? undefined : currentUrl ?? undefined}
+            defaultRatio={ratio}
+            onCancel={() => setCropping(false)}
+            onConfirm={(cropped) => {
+              onChange(cropped);
+              setCropping(false);
+            }}
+          />
+        )}
         {picked && (
           <ImageCropDialog
             file={picked}

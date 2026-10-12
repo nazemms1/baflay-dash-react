@@ -11,3 +11,5 @@ export const OrdersPage = lazy(() => import("@/features/orders/OrdersPage").then
 export const CreateOrderPage = lazy(() => import("@/features/orders/CreateOrderPage").then((m) => ({ default: m.CreateOrderPage })));
 export const IngredientsPage = lazy(() => import("@/features/ingredients/IngredientsPage").then((m) => ({ default: m.IngredientsPage })));
 export const OrderExtrasPage = lazy(() => import("@/features/order-extras/OrderExtrasPage").then((m) => ({ default: m.OrderExtrasPage })));
+export const DriverOrdersPage = lazy(() => import("@/features/drivers/DriverOrdersPage").then((m) => ({ default: m.DriverOrdersPage })));
+export const DriverAccountsPage = lazy(() => import("@/features/drivers/DriverAccountsPage").then((m) => ({ default: m.DriverAccountsPage })));

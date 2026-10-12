@@ -13,14 +13,30 @@ import { orderAdmin, type Named } from "@/services";
 import { StatusBadge } from "./StatusBadge";
 import { statusDotClass } from "./statusTone";
 import { isFinalOrder, nextStatusesOf, serverLabelOf, stagesOf } from "./orderStatus";
+import { DeliveryFailureFields } from "./deliveryFailure";
+import { failureIsComplete } from "./failureReasons";
 
-type EndStatus = "cancelled" | "rejected";
+type EndStatus = "cancelled" | "rejected" | "delivery_failed";
 
-const isEnding = (code: string): code is EndStatus => code === "cancelled" || code === "rejected";
+const isEnding = (code: string): code is EndStatus =>
+  code === "cancelled" || code === "rejected" || code === "delivery_failed";
+
+const END_LABEL_KEYS: Record<EndStatus, string> = {
+  cancelled: "ordersPage.endCancel",
+  rejected: "ordersPage.endReject",
+  delivery_failed: "ordersPage.endFailed",
+};
+
+const CONFIRM_KEYS: Record<EndStatus, string> = {
+  cancelled: "ordersPage.cancelOk",
+  rejected: "ordersPage.rejectOk",
+  delivery_failed: "ordersPage.failOk",
+};
 
 /**
  * نافذة تغيير الحالة: تعرض مراحل الطلب بتسمياتها الرسمية، ثم الخطوة التالية كأزرار واضحة
- * تُطبَّق بنقرة. الإلغاء والرفض في قسم منفصل، ولا يُنفَّذان إلا بعد تأكيد (والرفض يطلب سبباً).
+ * تُطبَّق بنقرة. الإلغاء والرفض وتعذّر التسليم في قسم منفصل، ولا تُنفَّذ إلا بعد تأكيد، ولكل منها
+ * سببه: الرفض سبب مكتوب، وتعذّر التسليم نوع سبب وملاحظة عند «سبب آخر».
  */
 export function StatusPicker({ row, onClose }: { row: Named; onClose: () => void }) {
   const { t } = useTranslation();
@@ -28,11 +44,13 @@ export function StatusPicker({ row, onClose }: { row: Named; onClose: () => void
   const queryClient = useQueryClient();
   const [ending, setEnding] = useState<EndStatus | null>(null);
   const [reason, setReason] = useState("");
+  const [failureReason, setFailureReason] = useState("");
+  const [failureNote, setFailureNote] = useState("");
 
   const id = toNumber(row.id);
   const current = toText(row.status);
   const final = isFinalOrder(row);
-  const endedBadly = current === "cancelled" || current === "rejected";
+  const endedBadly = current === "cancelled" || current === "rejected" || current === "delivery_failed";
   const next = nextStatusesOf(row);
   const flowNext = next.filter((code) => !isEnding(code));
   const endings = next.filter(isEnding);
@@ -41,8 +59,7 @@ export function StatusPicker({ row, onClose }: { row: Named; onClose: () => void
   const labelOf = (code: string) => serverLabelOf(row, code, language) ?? t(`orders.status.${code}`, { defaultValue: code });
 
   const change = useMutation({
-    mutationFn: ({ status, why }: { status: string; why?: string }) =>
-      orderAdmin.setStatus(id, { status, ...(why ? { reason: why } : {}) }),
+    mutationFn: (body: Record<string, unknown>) => orderAdmin.setStatus(id, body),
     onSuccess: async () => {
       toast.success(t("orders.statusUpdated"));
       await queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -50,6 +67,23 @@ export function StatusPicker({ row, onClose }: { row: Named; onClose: () => void
     },
     onError: (caught) => toast.error(toApiError(caught, t("errors.unexpected")).message),
   });
+
+  // جسم الطلب لكل نهاية. تعذّر التسليم يحمل نوع السبب، وملاحظته إن كُتبت.
+  const endingBody = (code: EndStatus): Record<string, unknown> => {
+    if (code === "delivery_failed") {
+      const note = failureNote.trim();
+      return { status: code, failure_reason: failureReason, ...(note ? { reason: note } : {}) };
+    }
+    const why = reason.trim();
+    return { status: code, ...(why ? { reason: why } : {}) };
+  };
+
+  const canConfirm =
+    ending === "rejected"
+      ? reason.trim().length >= 3
+      : ending === "delivery_failed"
+        ? failureIsComplete(failureReason, failureNote)
+        : true;
 
   return (
     <Dialog
@@ -130,9 +164,11 @@ export function StatusPicker({ row, onClose }: { row: Named; onClose: () => void
                       onClick={() => {
                         setEnding(code);
                         setReason("");
+                        setFailureReason("");
+                        setFailureNote("");
                       }}
                     >
-                      {code === "rejected" ? t("ordersPage.endReject") : t("ordersPage.endCancel")}
+                      {t(END_LABEL_KEYS[code])}
                     </Button>
                   ))}
                 </div>
@@ -149,16 +185,25 @@ export function StatusPicker({ row, onClose }: { row: Named; onClose: () => void
                         onChange={(event) => setReason(event.target.value)}
                       />
                     )}
+                    {ending === "delivery_failed" && (
+                      <DeliveryFailureFields
+                        reason={failureReason}
+                        note={failureNote}
+                        onReasonChange={setFailureReason}
+                        onNoteChange={setFailureNote}
+                        disabled={change.isPending}
+                      />
+                    )}
                     <div className="flex flex-wrap justify-end gap-2">
                       <Button variant="ghost" disabled={change.isPending} onClick={() => setEnding(null)}>
                         {t("ordersPage.undo")}
                       </Button>
                       <Button
                         variant="danger"
-                        disabled={change.isPending || (ending === "rejected" && reason.trim().length < 3)}
-                        onClick={() => change.mutate({ status: ending, why: reason.trim() || undefined })}
+                        disabled={change.isPending || !canConfirm}
+                        onClick={() => change.mutate(endingBody(ending))}
                       >
-                        {change.isPending ? t("crud.saving") : t(ending === "rejected" ? "ordersPage.rejectOk" : "ordersPage.cancelOk")}
+                        {change.isPending ? t("crud.saving") : t(CONFIRM_KEYS[ending])}
                       </Button>
                     </div>
                   </div>

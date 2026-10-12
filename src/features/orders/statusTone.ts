@@ -5,6 +5,7 @@ const STATUS_TONE: Record<string, StatusTone> = {
   delivered: "ok",
   cancelled: "danger",
   rejected: "danger",
+  delivery_failed: "danger",
   preparing: "warn",
   ready: "info",
   on_the_way: "info",

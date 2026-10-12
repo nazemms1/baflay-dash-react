@@ -9,11 +9,13 @@ export const ORDER_STATUSES = [
   "ready",
   "on_the_way",
   "completed",
+  "delivery_failed",
   "cancelled",
   "rejected",
 ] as const;
 
-const TERMINAL_STATUSES = ["completed", "cancelled", "rejected"];
+/** نهائية: لا تغيير بعدها. «تعذّر التسليم» نهائية مثل الإلغاء، والكاش يُفكّ عن الزبون عندها. */
+const TERMINAL_STATUSES = ["completed", "delivery_failed", "cancelled", "rejected"];
 
 /**
  * الانتقالات التي يقبلها الخادم، ويُستعمل هذا الجدول فقط حين لا يرسل الطلب كتلة `tracking`.
@@ -24,8 +26,9 @@ const FALLBACK_TRANSITIONS: Record<string, string[]> = {
   submitted: ["preparing", "cancelled", "rejected"],
   preparing: ["on_the_way", "ready", "completed", "cancelled", "rejected"],
   ready: ["completed", "cancelled"],
-  on_the_way: ["completed", "cancelled"],
+  on_the_way: ["completed", "delivery_failed", "cancelled"],
   completed: [],
+  delivery_failed: [],
   cancelled: [],
   rejected: [],
 };

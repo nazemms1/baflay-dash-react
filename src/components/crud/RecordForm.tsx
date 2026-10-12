@@ -494,6 +494,17 @@ export function RecordForm<T extends { id: number | string }>({
           />
         );
       }
+      case "date":
+        return (
+          <Input
+            label={field.label}
+            required={field.required}
+            type="date"
+            value={String(values[field.key] ?? "").slice(0, 10)}
+            onChange={(event) => set(field.key, event.target.value)}
+            error={error}
+          />
+        );
       case "textarea":
         return (
           <TextArea

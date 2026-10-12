@@ -23,6 +23,16 @@ export const orderAdmin = {
 
   setStatus: (id: Id, body: Record<string, unknown>) =>
     api.put(`admin/orders/${id}/status`, body).then((response) => response.data as unknown),
+
+  /** إسناد سائق لطلب توصيل، أو سحبه بـ `null`. الخادم يرفض بعد الاستلام من الفرع. */
+  assignDriver: (id: Id, driverId: Id | null) =>
+    api
+      .put(`admin/orders/${id}/driver`, { driver_id: driverId }, { silentError: true })
+      .then((response) => response.data as unknown),
+
+  /** حساب السائقين لكل فرع: الأرقام تُحسب من وقت إسناد الطلب، ولا مجموع بين الفروع. */
+  driverReport: (params: ListParams = {}, signal?: AbortSignal) =>
+    api.get("admin/orders/driver-report", { params, signal }).then((response) => unwrapData<unknown>(response.data)),
 };
 
 /**

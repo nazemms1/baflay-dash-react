@@ -90,27 +90,26 @@ export function LoginPage() {
               error={fieldMessage(error, "email")}
             />
 
-            <div className="relative">
-              <Input
-                label={t("auth.password")}
-                type={showPassword ? "text" : "password"}
-                name="password"
-                autoComplete="current-password"
-                dir="ltr"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                error={fieldMessage(error, "password")}
-                className="pe-11"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
-                className="absolute end-2 top-[2.1rem] grid size-8 cursor-pointer place-items-center rounded-lg text-muted hover:text-ink"
-              >
-                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </button>
-            </div>
+            <Input
+              label={t("auth.password")}
+              type={showPassword ? "text" : "password"}
+              name="password"
+              autoComplete="current-password"
+              dir="ltr"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              error={fieldMessage(error, "password")}
+              adornment={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
+                  className="grid size-8 cursor-pointer place-items-center rounded-lg text-muted hover:text-ink"
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              }
+            />
 
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
               <label className="flex cursor-pointer items-center gap-2 text-ink-soft">

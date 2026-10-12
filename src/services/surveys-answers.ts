@@ -21,12 +21,6 @@ export const customerSurveys = {
       .get("customer-surveys/statistics", { params, signal })
       .then((response) => unwrapData<unknown>(response.data)),
 
-  /** التصدير ملف، فيُعاد الجواب ثنائياً لا JSON. */
-  exportFile: (params: ListParams = {}) =>
-    api
-      .get("customer-surveys/export", { params, responseType: "blob" })
-      .then((response) => response.data as Blob),
-
   submitAnswers: (body: Record<string, unknown>) =>
     api.post("customer-survey-answers", body).then((response) => response.data as unknown),
 };

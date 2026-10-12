@@ -3,12 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { TFunction } from "i18next";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SelectField, TextArea, Toggle } from "@/components/ui/Fields";
 import { currentLanguage } from "@/i18n";
-import { ApiError, toApiError } from "@/lib/http/errors";
+import { toApiError } from "@/lib/http/errors";
 import { formatDateTime } from "@/lib/format";
 import { countries, customerSurveys, surveys, type Named } from "@/services";
 import type { CrudModule, FormProps } from "@/components/crud/types";
@@ -311,35 +311,6 @@ export const surveysModule = (t: TFunction): CrudModule<Named> => ({
   nameOf: (row) => str((row as Record<string, unknown>).title ?? row.id),
 });
 
-/** تصدير إجابات الاستبيانات ملفاً من الخادم، ويُحفظ باسم واضح للمستخدم. */
-export function ExportAnswersButton() {
-  const { t } = useTranslation();
-  const [busy, setBusy] = useState(false);
-
-  async function exportFile() {
-    setBusy(true);
-    try {
-      const blob = await customerSurveys.exportFile({});
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "customer-surveys.xlsx";
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (caught) {
-      toast.error(caught instanceof ApiError ? caught.message : t("errors.unexpected"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Button variant="secondary" onClick={() => void exportFile()} disabled={busy}>
-      <Download className="size-4" aria-hidden /> {busy ? t("crud.exporting") : t("crud.export")}
-    </Button>
-  );
-}
-
 /** تفاصيل إجابات زبون: بياناته ثم إجاباته على كل سؤال. */
 export function CustomerAnswersDetails({ record }: { record: Named }) {
   const { t } = useTranslation();
@@ -396,7 +367,6 @@ export const customerSurveysModule = (t: TFunction): CrudModule<Named> => ({
   },
   readOnly: true,
   fields: [],
-  headerActions: <ExportAnswersButton />,
   details: ({ record }: { record: Named }) => <CustomerAnswersDetails record={record} />,
   columns: [
     textColumn<Named>("customer", t("crud.field.name"), (row) => (
