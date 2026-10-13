@@ -97,7 +97,6 @@ function AddonsDialog({ itemId, itemName, onClose }: { itemId: number | string; 
       onClose={onClose}
       size="lg"
       title={t("addons.title", { name: itemName })}
-      description={t("addons.description")}
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={save.isPending}>{t("common.cancel")}</Button>
@@ -117,6 +116,18 @@ function AddonsDialog({ itemId, itemName, onClose }: { itemId: number | string; 
       )}
       {current.isSuccess && (
         <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/60 bg-primary-soft/40 px-4 py-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-ink">{t("addons.heading")}</h3>
+                <span className="rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold text-ink">Add-on</span>
+              </div>
+              <p className="mt-1 text-sm text-ink-soft">{t("addons.subtitle")}</p>
+            </div>
+            <span className="rounded-full bg-surface px-3 py-1 text-sm font-semibold tabular-nums text-ink">
+              {t("addons.count", { count: selected.length })}
+            </span>
+          </div>
           <RemoteCheckList
             source={INGREDIENT_OPTIONS}
             selected={selected}

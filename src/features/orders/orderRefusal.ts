@@ -9,6 +9,7 @@ const REFUSAL_KEYS: Record<string, string> = {
   cart_open_at_another_branch: "orderRefusal.cartAtAnotherBranch",
   delivery_paused: "orderRefusal.deliveryPaused",
   branch_closed: "orderRefusal.branchClosed",
+  extra_not_offered: "orderRefusal.extraNotOffered",
 };
 
 /**

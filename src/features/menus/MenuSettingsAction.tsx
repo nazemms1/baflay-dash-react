@@ -165,7 +165,8 @@ function ExtrasTab({ menuId, onDone }: { menuId: number; onDone: () => void }) {
     queryFn: async () => asArray(asRecord(await orderExtras.get()).ingredient_ids).map((value) => toNumber(value)),
   });
   const linked = useQuery({
-    queryKey: ["ingredients-page", "links", menuId],
+    // مفتاح خاص: الشاشة تحفظ معرّفات المسعَّر، وصفحة المكوّنات تحفظ الروابط كاملة تحت المفتاح نفسه.
+    queryKey: ["menu-extras-priced", menuId],
     queryFn: async ({ signal }) => normalizeLinks(await menuIngredients.list(menuId, signal)).map((link) => link.ingredientId),
   });
   const shown = useQuery({
@@ -178,15 +179,16 @@ function ExtrasTab({ menuId, onDone }: { menuId: number; onDone: () => void }) {
   // أسماء إضافات البراند وصورها، لكل إضافة على حدة وتبقى في الذاكرة المؤقتة.
   const details = useIngredientDetails(brand.data ?? []);
   const pricedHere = linked.data ?? [];
-  const options: CheckItem[] = (brand.data ?? []).map((id) => ({
+  const extraRows = (brand.data ?? []).map((id) => ({
     id,
     label: details.get(id)?.label ?? `#${id}`,
     image: details.get(id)?.image ?? null,
-    disabled: !pricedHere.includes(id),
-    hint: pricedHere.includes(id) ? undefined : t("menuSettings.notPriced"),
+    priced: pricedHere.includes(id),
   }));
 
   const selected = draft ?? (shown.data ?? []).filter((id) => pricedHere.includes(id));
+  const setOn = (id: number, on: boolean) =>
+    setDraft(on ? [...selected, id] : selected.filter((value) => value !== id));
 
   const save = useMutation({
     mutationFn: () => {
@@ -210,11 +212,34 @@ function ExtrasTab({ menuId, onDone }: { menuId: number; onDone: () => void }) {
 
   return (
     <div className="space-y-5">
-      <p className="rounded-xl bg-canvas px-4 py-3 text-sm text-ink-soft">{t("menuSettings.extrasHint")}</p>
-      {options.length === 0 ? (
+      <header className="space-y-1">
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-bold text-ink">{t("menuSettings.extrasTitle")}</h3>
+          <span className="rounded-md bg-secondary px-2 py-0.5 text-[11px] font-bold tracking-wide text-surface">Extra</span>
+        </div>
+        <p className="text-sm text-muted">{t("menuSettings.extrasSubtitle")}</p>
+      </header>
+      {extraRows.length === 0 ? (
         <p className="text-sm text-muted">{t("menuSettings.noBrandExtras")}</p>
       ) : (
-        <CheckList items={options} selected={selected} onChange={setDraft} />
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-secondary/30 bg-surface">
+          {extraRows.map((row) => {
+            const on = selected.includes(row.id);
+            const statusText = !row.priced ? t("menuSettings.notPriced") : on ? t("menuSettings.extraOn") : t("menuSettings.extraOff");
+            return (
+              <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <span className="flex min-w-0 items-center gap-3">
+                  <ExtraImage src={row.image} name={row.label} />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-ink">{row.label}</span>
+                    <span className={`block text-xs ${!row.priced ? "text-warn" : on ? "text-ok" : "text-muted"}`}>{statusText}</span>
+                  </span>
+                </span>
+                <ExtraSwitch checked={on} disabled={!row.priced} onChange={(next) => setOn(row.id, next)} />
+              </li>
+            );
+          })}
+        </ul>
       )}
       <div className="flex justify-end">
         <Button onClick={() => save.mutate()} disabled={save.isPending} className="bg-primary text-ink hover:bg-primary/90">
@@ -222,6 +247,31 @@ function ExtrasTab({ menuId, onDone }: { menuId: number; onDone: () => void }) {
         </Button>
       </div>
     </div>
+  );
+}
+
+/** مفتاح تشغيل لكل إضافة عامة: الشكل نفسه في كل الفروع، والحالة تُكتب بجانبه. */
+function ExtraSwitch({ checked, disabled, onChange }: { checked: boolean; disabled: boolean; onChange: (next: boolean) => void }) {
+  return (
+    <input
+      type="checkbox"
+      role="switch"
+      checked={checked}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.checked)}
+      className="h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-line transition checked:bg-secondary relative before:absolute before:start-0.5 before:top-0.5 before:size-5 before:rounded-full before:bg-surface before:shadow before:transition checked:before:translate-x-5 rtl:checked:before:-translate-x-5 disabled:cursor-not-allowed disabled:opacity-40"
+    />
+  );
+}
+
+/** صورة الإضافة العامة، وإن غابت فحرفها الأول. */
+function ExtraImage({ src, name }: { src: string | null; name: string }) {
+  return src ? (
+    <img src={src} alt="" className="size-10 shrink-0 rounded-lg object-cover ring-1 ring-line" />
+  ) : (
+    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-canvas font-bold text-muted ring-1 ring-line">
+      {name.charAt(0)}
+    </span>
   );
 }
 

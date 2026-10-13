@@ -570,7 +570,10 @@
     "description": "Ingredients the customer can add to this item.",
     "saved": "Item add-ons saved",
     "uncoveredTitle": "Some add-ons are not priced in these branches, so they will not show there:",
-    "uncoveredBranch": "{{branch}}: {{count}} unpriced add-on(s)"
+    "uncoveredBranch": "{{branch}}: {{count}} unpriced add-on(s)",
+    "heading": "Item add-ons",
+    "subtitle": "Add-ons for this item only. Customers choose from them when ordering. Each branch sets the price in its menu.",
+    "count": "{{count}} selected"
   },
   "orderExtras": {
     "subtitle": "Extras shown to customers when ordering any item, in every branch that prices them.",
@@ -596,7 +599,11 @@
     "suggestionsHint": "Pick an item, then choose the items suggested with it (“you may also like”).",
     "pickItem": "Item",
     "noMenuItems": "This menu has no items.",
-    "suggestFor": "Suggestions for “{{name}}”: shown with it as “you may also like”"
+    "suggestFor": "Suggestions for “{{name}}”: shown with it as “you may also like”",
+    "extrasTitle": "General extras at this branch",
+    "extrasSubtitle": "Brand-wide sauces and extras. Switch off anything this branch doesn't offer customers.",
+    "extraOn": "Offered at this branch",
+    "extraOff": "Switched off at this branch"
   },
   "categoryOrder": {
     "open": "Category order",
@@ -704,7 +711,13 @@
     "suggestions": "You may also like",
     "suggestionsHint": "Tap an item to add it to the order right away.",
     "note": "Item note",
-    "unitTotal": "Item price"
+    "unitTotal": "Item price",
+    "addOnsHeading": "Add-ons",
+    "addOnsCounter": "{{count}} of {{max}}",
+    "extrasHeading": "Extras",
+    "extrasHint": "Branch sauces, no limit",
+    "free": "Free",
+    "extrasNoLimit": "Added to this item — no limit"
   },
   "orderInvoice": {
     "orderNo": "Order no.",
@@ -795,7 +808,8 @@
     "newOrdersTitle_other": "{{count}} new orders",
     "newOrdersHint": "The list is up to date",
     "newOrdersView": "View latest",
-    "newOrdersDismiss": "Dismiss"
+    "newOrdersDismiss": "Dismiss",
+    "newOrdersTitle": "{{count}} new orders"
   },
   "crop": {
     "title": "Crop image",
@@ -924,7 +938,8 @@
     "orderInProgress": "An order is still open{{order}} at another branch. Finish it first.",
     "cartAtAnotherBranch": "A cart is still open{{order}} at another branch.",
     "deliveryPaused": "This branch is not accepting delivery right now.",
-    "branchClosed": "This branch is closed right now."
+    "branchClosed": "This branch is closed right now.",
+    "extraNotOffered": "Some extras are no longer offered at this branch. Choose them again, or reload the page."
   },
   "receipt": {
     "kicker": "Receipt",

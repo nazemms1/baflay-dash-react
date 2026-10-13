@@ -146,8 +146,8 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
       line.variant === "meal" ? [t("orderBuilder.meal"), comboName].filter(Boolean).join(" · ") : t("orderBuilder.sandwich");
     return [
       variantText,
-      ...line.addOns.map((addOn) => `+ ${addOn.name}`),
-      ...line.sauces.map((sauce) => `+ ${sauce.name}`),
+      ...line.addOns.map((addOn) => `+ ${addOn.name}${addOn.quantity > 1 ? ` ×${addOn.quantity}` : ""}`),
+      ...line.sauces.map((sauce) => `+ ${sauce.name}${sauce.quantity > 1 ? ` ×${sauce.quantity}` : ""}`),
       line.notes,
     ]
       .filter(Boolean)

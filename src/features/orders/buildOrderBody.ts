@@ -23,10 +23,12 @@ let lineSequence = 0;
 /** مفتاح محلي لكل سطر في السلة، لا يُرسل إلى الخادم. */
 export const newLineKey = () => `line-${++lineSequence}`;
 
+/** إضافة أو صلصة في سطر الصنف: الكمية كما يختارها الكاشير بعدّاد، والسعر لكل وحدة. */
 export interface ChoiceLine {
   id: number;
   name: string;
   price: number;
+  quantity: number;
 }
 
 /** صنف في السلة. السعر لكل وحدة يشمل الكومبو والإضافات والصلصات. */
@@ -90,7 +92,7 @@ export function buildCounterOrderBody(input: {
             item_id: line.itemId,
             quantity: line.quantity,
             variant: line.variant,
-            add_ons: line.addOns.map((addOn) => ({ id: addOn.id, quantity: 1 })),
+            add_ons: line.addOns.map((addOn) => ({ id: addOn.id, quantity: addOn.quantity })),
             notes: line.notes.trim(),
           },
         ]
@@ -109,7 +111,10 @@ export function buildCounterOrderBody(input: {
   const sauces = new Map<number, number>();
   for (const line of input.lines) {
     if (line.kind !== "item") continue;
-    for (const sauce of line.sauces) sauces.set(sauce.id, (sauces.get(sauce.id) ?? 0) + line.quantity);
+    // كمية الصلصة في السطر × عدد وحدات السطر، ثم تُجمع مع السطور الأخرى لنفس الصلصة.
+    for (const sauce of line.sauces) {
+      sauces.set(sauce.id, (sauces.get(sauce.id) ?? 0) + sauce.quantity * line.quantity);
+    }
   }
 
   const name = input.customerName.trim();
