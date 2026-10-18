@@ -47,7 +47,7 @@ export function LocationField({
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-secondary hover:bg-secondary-soft"
+            className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-secondary hover:bg-secondary-soft sm:h-8"
           >
             <Trash2 className="size-3.5" aria-hidden />
             {t("crud.location.clear")}

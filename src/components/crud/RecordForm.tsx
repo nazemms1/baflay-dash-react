@@ -182,13 +182,13 @@ function RowsField({
             setDragFrom(null);
           }}
           className={clsx(
-            "flex items-end gap-2 rounded-xl border border-line bg-canvas/60 p-3 transition",
+            "flex flex-col gap-3 rounded-xl border border-line bg-canvas/60 p-3 transition sm:flex-row sm:items-end sm:gap-2",
             dragFrom === index && "opacity-50",
             dragFrom !== null && dragFrom !== index && "ring-2 ring-primary/30"
           )}
         >
           {sortable && (
-            <div className="flex shrink-0 flex-col items-center gap-0.5 self-center">
+            <div className="flex shrink-0 flex-row items-center justify-center gap-1 sm:flex-col sm:gap-0.5 sm:self-center">
               <button
                 type="button"
                 draggable
@@ -204,7 +204,7 @@ function RowsField({
                   if (event.key === "ArrowUp") moveRow(index, index - 1);
                   if (event.key === "ArrowDown") moveRow(index, index + 1);
                 }}
-                className="grid h-9 w-7 cursor-grab place-items-center rounded-md text-muted hover:bg-surface hover:text-ink active:cursor-grabbing"
+                className="grid h-11 w-11 cursor-grab place-items-center rounded-md text-muted hover:bg-surface hover:text-ink active:cursor-grabbing sm:h-9 sm:w-7"
               >
                 <GripVertical className="size-4" aria-hidden />
               </button>
@@ -213,7 +213,7 @@ function RowsField({
                 aria-label={t("crud.moveUp")}
                 disabled={index === 0}
                 onClick={() => moveRow(index, index - 1)}
-                className="grid size-6 cursor-pointer place-items-center rounded-md text-muted hover:bg-surface hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+                className="grid size-11 cursor-pointer place-items-center rounded-md text-muted hover:bg-surface hover:text-ink disabled:cursor-not-allowed disabled:opacity-30 sm:size-6"
               >
                 <ChevronUp className="size-3.5" aria-hidden />
               </button>
@@ -222,7 +222,7 @@ function RowsField({
                 aria-label={t("crud.moveDown")}
                 disabled={index === rows.length - 1}
                 onClick={() => moveRow(index, index + 1)}
-                className="grid size-6 cursor-pointer place-items-center rounded-md text-muted hover:bg-surface hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+                className="grid size-11 cursor-pointer place-items-center rounded-md text-muted hover:bg-surface hover:text-ink disabled:cursor-not-allowed disabled:opacity-30 sm:size-6"
               >
                 <ChevronDown className="size-3.5" aria-hidden />
               </button>
@@ -626,7 +626,7 @@ export function RecordForm<T extends { id: number | string }>({
       {groupFields(fields).map((group, index) => (
         <section
           key={`${group.title ?? "general"}-${index}`}
-          className={group.title ? "space-y-4 rounded-2xl border border-line bg-canvas/40 p-5" : undefined}
+          className={group.title ? "space-y-4 rounded-2xl border border-line bg-canvas/40 p-4 sm:p-5" : undefined}
         >
           {group.title && <h3 className="text-sm font-semibold text-ink">{group.title}</h3>}
           <div className="grid gap-5 sm:grid-cols-2">
@@ -639,7 +639,7 @@ export function RecordForm<T extends { id: number | string }>({
         </section>
       ))}
 
-      <div className="sticky bottom-0 z-20 -mx-6 -mb-5 flex flex-wrap justify-end gap-2 border-t border-line bg-surface/95 px-6 py-4 backdrop-blur">
+      <div className="sticky bottom-0 z-20 -mx-4 -mb-4 flex flex-wrap justify-end gap-2 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mb-5 sm:px-6 sm:py-4 [&>*]:flex-1 sm:[&>*]:flex-none">
         <Button variant="secondary" onClick={onDone} disabled={save.isPending}>
           {t("common.cancel")}
         </Button>

@@ -33,7 +33,7 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
             aria-checked={active}
             onClick={() => onChange(option.value)}
             className={clsx(
-              "h-8 cursor-pointer rounded-lg px-3 text-sm font-medium transition",
+              "h-11 cursor-pointer rounded-lg px-3 text-sm font-medium transition sm:h-8",
               active ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"
             )}
           >

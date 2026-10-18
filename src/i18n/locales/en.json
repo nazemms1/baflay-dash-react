@@ -28,7 +28,12 @@
     "date": "Date",
     "username": "Username",
     "createdAt": "Created at",
-    "pagination": "Pagination"
+    "pagination": "Pagination",
+    "filters": "Filters",
+    "filtersCount": "Filters ({{count}})",
+    "resetFilters": "Reset",
+    "showResults": "Show results",
+    "removeFilter": "Remove filter"
   },
   "nav": {
     "groups": {
@@ -342,6 +347,7 @@
       "item": "Item",
       "deliveryArea": "Branch location & delivery area",
       "menuCurrency": "Menu currency",
+      "mealPrice": "Meal price",
       "country": "Country",
       "isAcceptingDelivery": "Accepting delivery",
       "menu": "Menu",
@@ -458,7 +464,8 @@
     "options": "Options",
     "noItems": "No items at this branch.",
     "cart": "Cart",
-    "emptyCart": "The cart is empty. Tap an item to add it.",
+    "openCart": "View cart",
+    "emptyCart":"The cart is empty. Tap an item to add it.",
     "customBurgerName": "Custom burger: {{list}}",
     "subtotal": "Subtotal",
     "tax": "Tax (10%)",
@@ -943,6 +950,7 @@
   },
   "receipt": {
     "kicker": "Receipt",
+    "paper": "Printer paper",
     "orderNo": "Order no.",
     "dateTime": "Date & time",
     "cashier": "Cashier",

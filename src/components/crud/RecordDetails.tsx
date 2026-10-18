@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatNumber } from "@/lib/format";
 import { localizedRecord, type RawBilingual } from "@/lib/localized";
 import { groupFields } from "./groups";
+import { defaultValues } from "./payload";
 import type { CrudModule, FieldDef, RowColumn } from "./types";
 
 type RecordLike = Record<string, unknown>;
@@ -44,7 +45,7 @@ function Tile({ label, wide, children }: { label: string; wide?: boolean; childr
 /** قسم بعنوان واضح يحمل مجموعة من البطاقات. */
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line bg-surface p-5 shadow-[0_1px_0_rgba(63,62,60,0.04)]">
+    <section className="rounded-2xl border border-line bg-surface p-4 shadow-[0_1px_0_rgba(63,62,60,0.04)] sm:p-5">
       <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-ink">
         <span aria-hidden className="h-4 w-1 rounded-full bg-primary" />
         {title}
@@ -76,55 +77,72 @@ function Bilingual({ en, ar, multiline }: { en: string; ar: string; multiline?: 
   );
 }
 
-/** جدول الصفوف المتكررة كما تُدخَل: سطر لكل صف، وأعمدته من تعريف الحقل. */
+/** محتوى خلية في صف متكرر، بحسب نوع عمودها. */
+function rowCell(column: RowColumn, row: RecordLike, language: Language): ReactNode {
+  if (column.kind === "image") {
+    const url = urlOf(row.url) ?? urlOf(row[column.key]);
+    return url ? (
+      <img src={url} alt="" className="size-12 rounded-lg object-cover ring-1 ring-line" />
+    ) : (
+      <span className="text-muted">—</span>
+    );
+  }
+  if (column.kind === "select") {
+    const name = column.self ? localizedRecord(row as RawBilingual, language) : "";
+    return name || relationLabel(row, column.key, language);
+  }
+  const value = row[column.key];
+  return value === null || value === undefined || value === "" ? "—" : str(value);
+}
+
+/**
+ * الصفوف المتكررة كما تُدخَل: على الشاشات الواسعة جدول، وعلى الهاتف كرت صغير لكل صف،
+ * فلا يتمرّر الجدول أفقياً داخل النافذة.
+ */
 function RowsTable({ columns, rows, language }: { columns: RowColumn[]; rows: RecordLike[]; language: Language }) {
   const { t } = useTranslation();
   if (rows.length === 0) return <span className="text-muted">{t("common.noData")}</span>;
 
   return (
-    <div className="overflow-x-auto rounded-xl ring-1 ring-line">
-      <table className="w-full min-w-[320px] text-sm">
-        <thead className="bg-secondary text-xs font-semibold text-surface">
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key} className="px-3 py-2.5 text-start font-medium">{column.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index} className="border-t border-line">
-              {columns.map((column) => {
-                if (column.kind === "image") {
-                  const url = urlOf(row.url) ?? urlOf(row[column.key]);
-                  return (
-                    <td key={column.key} className="px-3 py-2.5">
-                      {url ? (
-                        <img src={url} alt="" className="size-12 rounded-lg object-cover ring-1 ring-line" />
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
-                    </td>
-                  );
-                }
-                if (column.kind === "select") {
-                  const name = column.self ? localizedRecord(row as RawBilingual, language) : "";
-                  return (
-                    <td key={column.key} className="px-3 py-2.5">{name || relationLabel(row, column.key, language)}</td>
-                  );
-                }
-                const value = row[column.key];
-                return (
-                  <td key={column.key} className="px-3 py-2.5 tabular-nums">
-                    {value === null || value === undefined || value === "" ? "—" : str(value)}
-                  </td>
-                );
-              })}
+    <>
+      <ul className="space-y-2 md:hidden">
+        {rows.map((row, index) => (
+          <li key={index} className="rounded-lg bg-surface p-3 ring-1 ring-line">
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
+              {columns.map((column) => (
+                <div key={column.key} className="min-w-0">
+                  <dt className="text-xs text-muted">{column.label}</dt>
+                  <dd className="mt-0.5 min-w-0 break-words">{rowCell(column, row, language)}</dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden overflow-x-auto rounded-xl ring-1 ring-line md:block">
+        <table className="w-full min-w-[320px] text-sm">
+          <thead className="bg-secondary text-xs font-semibold text-surface">
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key} className="px-3 py-2.5 text-start font-medium">{column.label}</th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={index} className="border-t border-line">
+                {columns.map((column) => (
+                  <td key={column.key} className="px-3 py-2.5 tabular-nums">
+                    {rowCell(column, row, language)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
@@ -154,7 +172,7 @@ function FieldValue({
       return <Badge tone={raw ? "ok" : "neutral"}>{raw ? t("common.yes") : t("common.no")}</Badge>;
     case "email":
       return str(raw) ? (
-        <a href={`mailto:${str(raw)}`} dir="ltr" className="text-secondary underline-offset-4 hover:underline">
+        <a href={`mailto:${str(raw)}`} dir="ltr" className="break-all text-secondary underline-offset-4 hover:underline">
           {str(raw)}
         </a>
       ) : (
@@ -206,7 +224,7 @@ function FieldValue({
 
 /**
  * عرض التفاصيل: بطاقة رأس بالصورة والاسم، ثم أقسام منظمة بحقولها. الموقع
- * يظهر على خريطة للقراءة، والصفوف تظهر في جداول.
+ * يظهر على خريطة للقراءة، والصفوف تظهر في جداول، وعلى الهاتف عمود واحد.
  */
 export function RecordDetails<T extends { id: number | string }>({
   module,
@@ -227,7 +245,7 @@ export function RecordDetails<T extends { id: number | string }>({
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-center gap-5 rounded-2xl bg-night p-5 text-surface">
+      <header className="flex flex-wrap items-center gap-5 rounded-2xl bg-night p-4 text-surface sm:p-5">
         {heroUrl ? (
           <img src={heroUrl} alt="" className="size-20 rounded-2xl object-cover ring-2 ring-primary/60" />
         ) : (
@@ -268,10 +286,11 @@ export function RecordDetails<T extends { id: number | string }>({
             }
 
             if (field.kind === "rows") {
-              const rows = Array.isArray(source[field.key]) ? (source[field.key] as RecordLike[]) : [];
+              // الصفوف تُقرأ بالطريقة نفسها التي يقرأ بها النموذج، فيظهر سعر الصنف في القائمة كما في التعديل.
+              const rows = defaultValues([field], source)[field.key] as RecordLike[];
               return (
                 <Tile key={field.key} label={field.label} wide>
-                  <RowsTable columns={field.columns} rows={rows} language={language} />
+                  <RowsTable columns={[...field.columns, ...(field.viewColumns ?? [])]} rows={rows} language={language} />
                 </Tile>
               );
             }

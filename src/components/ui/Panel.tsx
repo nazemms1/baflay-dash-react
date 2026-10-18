@@ -12,7 +12,7 @@ export function Panel({ title, description, action, className, children, ...prop
   return (
     <section
       className={clsx(
-        "flex min-w-0 flex-col rounded-2xl border border-line bg-surface p-5 shadow-[0_1px_0_rgba(23,25,31,0.04)]",
+        "flex min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 shadow-[0_1px_0_rgba(23,25,31,0.04)] sm:p-5",
         className
       )}
       {...props}

@@ -51,7 +51,12 @@ export function BranchChooser({ busyId, onSelect }: { busyId: number | null; onS
               const image = typeof row.image === "string" && row.image ? row.image : null;
 
               return (
-                <li key={id} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface">
+                <li
+                  key={id}
+                  className={`flex flex-col overflow-hidden rounded-2xl border bg-surface transition ${
+                    busyId === id ? "border-primary ring-2 ring-primary/40" : "border-line"
+                  }`}
+                >
                   {image ? (
                     <img src={image} alt="" className="aspect-video w-full object-cover" />
                   ) : (
@@ -76,7 +81,7 @@ export function BranchChooser({ busyId, onSelect }: { busyId: number | null; onS
                       {phone && (
                         <a
                           href={`tel:${phone}`}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-primary px-3 text-sm font-medium text-ink hover:bg-primary-soft"
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-primary px-3 text-sm font-medium text-ink hover:bg-primary-soft"
                         >
                           <Phone className="size-4" aria-hidden />
                           {t("createOrder.call")}

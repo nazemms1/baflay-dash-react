@@ -59,7 +59,7 @@ export function LoginPage() {
       </div>
 
       <main className="relative z-10 w-full max-w-md">
-        <div className="rounded-3xl border border-line bg-surface p-8 shadow-[0_20px_60px_-20px_rgba(63,62,60,0.35)] sm:p-10">
+        <div className="rounded-3xl border border-line bg-surface p-6 shadow-[0_20px_60px_-20px_rgba(63,62,60,0.35)] sm:p-10">
           <div className="-mt-20 mb-6 flex justify-center">
             <div className="grid size-28 place-items-center rounded-full bg-surface shadow-[0_10px_30px_-10px_rgba(63,62,60,0.4)] ring-8 ring-canvas transition hover:scale-[1.03]">
               <img src="/logo.png" alt={t("auth.logoAlt")} className="h-16 w-auto" />
@@ -104,7 +104,7 @@ export function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword((value) => !value)}
                   aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
-                  className="grid size-8 cursor-pointer place-items-center rounded-lg text-muted hover:text-ink"
+                  className="grid size-10 cursor-pointer place-items-center rounded-lg text-muted hover:text-ink sm:size-8"
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
@@ -124,7 +124,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={() => setForgotOpen(true)}
-                className="cursor-pointer font-semibold text-secondary hover:underline"
+                className="inline-flex min-h-11 cursor-pointer items-center font-semibold text-secondary hover:underline sm:min-h-0"
               >
                 {t("auth.forgotPassword")}
               </button>

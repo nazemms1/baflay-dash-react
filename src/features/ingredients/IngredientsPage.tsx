@@ -245,7 +245,7 @@ export function IngredientsPage() {
   return (
     <div className="space-y-6 pb-28">
       <header>
-        <h1 className="text-2xl font-bold text-ink">{t("nav.ingredients")}</h1>
+        <h1 className="text-xl font-bold text-ink sm:text-2xl">{t("nav.ingredients")}</h1>
         <p className="mt-1 text-sm text-muted">{t("ingredientsPage.subtitle")}</p>
       </header>
 
@@ -313,10 +313,10 @@ export function IngredientsPage() {
                     setCardPage(1);
                   }}
                   placeholder={t("ingredientsPage.search")}
-                  className="h-10 w-full rounded-xl border border-line bg-surface ps-9 pe-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+                  className="h-11 w-full rounded-xl border border-line bg-surface ps-9 pe-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 sm:h-10"
                 />
               </div>
-              <div role="radiogroup" aria-label={t("ingredientsPage.filterLabel")} className="inline-flex flex-wrap gap-1 rounded-xl bg-line/50 p-1">
+              <div role="radiogroup" aria-label={t("ingredientsPage.filterLabel")} className="grid grid-cols-2 gap-1 rounded-xl bg-line/50 p-1 sm:inline-flex sm:flex-wrap">
                 {filters.map((option) => (
                   <button
                     key={option.value}
@@ -328,7 +328,7 @@ export function IngredientsPage() {
                       setCardPage(1);
                     }}
                     className={clsx(
-                      "h-8 cursor-pointer rounded-lg px-3 text-sm font-medium transition",
+                      "h-11 cursor-pointer rounded-lg px-3 text-sm font-medium transition sm:h-8",
                       filter === option.value ? "bg-surface text-ink shadow-sm" : "text-ink-soft hover:text-ink"
                     )}
                   >
@@ -338,7 +338,7 @@ export function IngredientsPage() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-end gap-3 rounded-xl bg-canvas/70 p-3">
+            <div className="mt-4 grid gap-3 rounded-xl bg-canvas/70 p-3 sm:flex sm:flex-wrap sm:items-end">
               <span className="self-center text-xs font-semibold text-muted">
                 <Zap className="me-1 inline size-3.5" aria-hidden />
                 {t("ingredientsPage.onVisible", { count: visible.length })}
@@ -350,7 +350,7 @@ export function IngredientsPage() {
               <Button variant="ghost" size="sm" disabled={!canUnlink || visibleLinked.length === 0} onClick={() => setConfirmUnlink(true)}>
                 <Link2Off className="size-4" aria-hidden /> {t("ingredientsPage.unlinkVisible", { count: visibleLinked.length })}
               </Button>
-              <div className="w-32">
+              <div className="w-full sm:w-32">
                 <SelectField label={t("crud.field.currency")} options={currencyOptions} value={bulkCurrency} disabled={!canEdit} placeholder={t("crud.choose")} onChange={(value) => setBulkCurrency(value === null ? null : String(value))} />
               </div>
               <Button variant="ghost" size="sm" disabled={!canEdit || !bulkCurrency || visibleLinked.length === 0}
@@ -360,8 +360,8 @@ export function IngredientsPage() {
                 }}>
                 <Check className="size-4" aria-hidden /> {t("ingredientsPage.unifyCurrency")}
               </Button>
-              <div className="ms-auto flex flex-wrap items-end gap-2">
-                <div className="w-56">
+              <div className="grid gap-2 sm:ms-auto sm:flex sm:flex-wrap sm:items-end">
+                <div className="w-full sm:w-56">
                   <SelectField
                     label={t("ingredientsPage.copyFrom")}
                     options={menuList.data?.filter((menu) => toNumber(menu.id) !== menuId).map((menu) => ({ value: toNumber(menu.id), label: menuLabel(menu) })) ?? []}
@@ -400,12 +400,12 @@ export function IngredientsPage() {
       )}
 
       {canEdit && changedCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:px-6 lg:start-64">
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-6 lg:start-64">
           <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-ink-soft">
               <span className="font-semibold text-ink tabular-nums">{formatNumber(changedCount)}</span> {t("ingredientsPage.changed")}
             </p>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex">
               <Button variant="secondary" disabled={save.isPending} onClick={() => setDraft(null)}>
                 {t("ingredientsPage.discard")}
               </Button>
@@ -479,7 +479,7 @@ function IngredientCard({
   return (
     <article
       className={clsx(
-        "flex flex-col gap-4 rounded-2xl border bg-surface p-5 transition",
+        "flex flex-col gap-4 rounded-2xl border bg-surface p-4 transition sm:p-5",
         row.isLinked ? "border-primary/60 shadow-[0_6px_20px_-12px_rgba(254,197,95,0.9)]" : "border-line",
         changed && "ring-2 ring-primary/40"
       )}
@@ -492,17 +492,16 @@ function IngredientCard({
           aria-label={t("ingredientsPage.linkToggle")}
           disabled={disabled}
           onClick={onToggle}
-          className={clsx(
-            "relative mt-1 h-6 w-11 shrink-0 cursor-pointer rounded-full transition disabled:opacity-50",
-            row.isLinked ? "bg-primary" : "bg-line"
-          )}
+          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full disabled:opacity-50"
         >
-          <span
-            className={clsx(
-              "absolute top-0.5 size-5 rounded-full bg-surface shadow transition",
-              row.isLinked ? "start-[1.375rem]" : "start-0.5"
-            )}
-          />
+          <span className={clsx("relative block h-6 w-11 rounded-full transition", row.isLinked ? "bg-primary" : "bg-line")}>
+            <span
+              className={clsx(
+                "absolute top-0.5 size-5 rounded-full bg-surface shadow transition",
+                row.isLinked ? "start-[1.375rem]" : "start-0.5"
+              )}
+            />
+          </span>
         </button>
 
         <div className="min-w-0 flex-1">
@@ -620,7 +619,7 @@ function CatalogDialog({
   }
 
   return (
-    <Dialog open onClose={onClose} title={t(state.mode === "create" ? "ingredientsPage.newTitle" : "ingredientsPage.editTitle")}>
+    <Dialog open onClose={onClose} title={t(state.mode === "create" ? "ingredientsPage.newTitle" : "ingredientsPage.editTitle")} fullOnMobile>
       <form onSubmit={submit} noValidate className="space-y-5">
         {error && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{error}</p>}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -637,7 +636,7 @@ function CatalogDialog({
           />
           <ImageField label={t("crud.field.image")} currentUrl={initial?.image ?? null} file={image} onChange={setImage} />
         </div>
-        <div className="sticky bottom-0 z-20 -mx-6 -mb-5 flex justify-end gap-2 border-t border-line bg-surface/95 px-6 py-4 backdrop-blur">
+        <div className="sticky bottom-0 z-20 -mx-4 -mb-4 flex justify-end gap-2 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:-mb-5 sm:px-6 sm:py-4 [&>*]:flex-1 sm:[&>*]:flex-none">
           <Button variant="secondary" onClick={onClose} disabled={save.isPending}>{t("common.cancel")}</Button>
           <Button type="submit" disabled={save.isPending} className="bg-primary text-ink hover:bg-primary/90">
             {save.isPending ? t("crud.saving") : t("crud.save")}

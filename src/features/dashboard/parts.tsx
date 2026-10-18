@@ -31,7 +31,7 @@ export function KpiTile({
 }) {
   const danger = tone === "danger";
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-5 shadow-[0_1px_0_rgba(23,25,31,0.04)] transition hover:border-primary/60">
+    <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-[0_1px_0_rgba(23,25,31,0.04)] transition hover:border-primary/60 sm:gap-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-ink-soft">{label}</p>
         {Icon && (
@@ -46,7 +46,7 @@ export function KpiTile({
         )}
       </div>
       <div>
-        <p className={clsx("text-3xl font-bold tracking-tight tabular-nums", danger ? "text-danger" : "text-ink")}>
+        <p className={clsx("text-2xl font-bold tracking-tight tabular-nums sm:text-3xl", danger ? "text-danger" : "text-ink")}>
           {value}
         </p>
         {hint && <div className="mt-1.5 text-xs text-muted">{hint}</div>}

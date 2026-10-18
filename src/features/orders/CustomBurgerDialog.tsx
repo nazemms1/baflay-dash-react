@@ -10,6 +10,7 @@ import { currentLanguage } from "@/i18n";
 import { asArray, asRecord, toNumber, toText } from "@/lib/coerce";
 import { formatMoney } from "@/lib/format";
 import { localizedRecord } from "@/lib/localized";
+import { useIngredientDetails } from "@/features/ingredients/details";
 import { menuIngredients } from "@/services";
 import { TILL_MAX_QUANTITY, type BurgerDraft } from "./buildOrderBody";
 
@@ -68,6 +69,8 @@ export function CustomBurgerDialog({
     queryFn: ({ signal }) => menuIngredients.list(menuId, signal),
   });
   const ingredients = activeIngredients(links.data, language);
+  // صور المكونات من الكتالوج: قائمة الفرع قد لا تحملها، فتُقرأ من الكتالوج بمعرّف كل مكوّن.
+  const details = useIngredientDetails(ingredients.map((row) => row.id));
 
   const picked = ingredients.filter((row) => (quantities[row.id] ?? 0) > 0);
   const total = picked.reduce((sum, row) => sum + row.price * (quantities[row.id] ?? 0), 0);
@@ -95,6 +98,7 @@ export function CustomBurgerDialog({
       open
       onClose={onClose}
       size="lg"
+      fullOnMobile
       title={t("createOrder.burgerTitle")}
       description={t("createOrder.burgerHint")}
       footer={
@@ -121,7 +125,8 @@ export function CustomBurgerDialog({
                 key={row.id}
                 className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${quantity > 0 ? "border-primary bg-primary-soft" : "border-line"}`}
               >
-                <span className="min-w-0">
+                <Thumb src={details.get(row.id)?.image ?? null} name={row.name} />
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{row.name}</span>
                   <span className="block text-xs text-muted tabular-nums">{formatMoney(row.price, row.currency || currency)}</span>
                 </span>
@@ -131,7 +136,7 @@ export function CustomBurgerDialog({
                     aria-label={t("createOrder.less")}
                     disabled={quantity === 0}
                     onClick={() => setQuantity(row.id, quantity - 1)}
-                    className="grid size-8 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40"
+                    className="grid size-11 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40 sm:size-8"
                   >
                     <Minus className="size-3.5" aria-hidden />
                   </button>
@@ -141,7 +146,7 @@ export function CustomBurgerDialog({
                     aria-label={t("createOrder.more")}
                     disabled={quantity >= TILL_MAX_QUANTITY}
                     onClick={() => setQuantity(row.id, quantity + 1)}
-                    className="grid size-8 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40"
+                    className="grid size-11 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40 sm:size-8"
                   >
                     <Plus className="size-3.5" aria-hidden />
                   </button>
@@ -152,5 +157,16 @@ export function CustomBurgerDialog({
         </ul>
       )}
     </Dialog>
+  );
+}
+
+/** صورة المكوّن، وإن غابت فحرفه الأول كما في نافذة الصنف. */
+function Thumb({ src, name }: { src: string | null; name: string }) {
+  return src ? (
+    <img src={src} alt="" className="size-10 shrink-0 rounded-lg object-cover ring-1 ring-line" />
+  ) : (
+    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-canvas font-bold text-muted ring-1 ring-line">
+      {name.charAt(0)}
+    </span>
   );
 }

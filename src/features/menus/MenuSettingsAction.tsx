@@ -52,7 +52,7 @@ export function MenuSettingsAction({ row }: { row: Named }) {
         onClick={() => setOpen(true)}
         aria-label={t("menuSettings.open")}
         title={t("menuSettings.open")}
-        className="grid size-8 cursor-pointer place-items-center rounded-lg text-muted transition hover:bg-primary-soft hover:text-ink"
+        className="grid size-11 cursor-pointer place-items-center rounded-lg text-muted transition hover:bg-primary-soft hover:text-ink sm:size-8"
       >
         <Settings2 className="size-4" aria-hidden />
       </button>
@@ -81,7 +81,7 @@ function MenuSettingsDialog({ menuId, menuName, onClose }: { menuId: number; men
   const tab = allowedTabs.includes(requestedTab) ? requestedTab : (allowedTabs[0] ?? "combo");
 
   return (
-    <Dialog open onClose={onClose} size="lg" title={t("menuSettings.title", { name: menuName })} description={t("menuSettings.description")}>
+    <Dialog open onClose={onClose} size="lg" fullOnMobile title={t("menuSettings.title", { name: menuName })} description={t("menuSettings.description")}>
       <div className="space-y-6">
         <Segmented<Tab>
           label={t("menuSettings.tabs")}
@@ -142,8 +142,8 @@ function ComboTab({ menuId, onDone }: { menuId: number; onDone: () => void }) {
         <Input label={`${t("menuSettings.comboName")} · ${t("crud.arabic")}`} dir="rtl" value={form.nameAr}
           onChange={(event) => setDraft({ ...form, nameAr: event.target.value })} />
       </div>
-      <div className="flex justify-end">
-        <Button onClick={() => save.mutate()} disabled={save.isPending} className="bg-primary text-ink hover:bg-primary/90">
+      <div className="sm:flex sm:justify-end">
+        <Button onClick={() => save.mutate()} disabled={save.isPending} className="w-full bg-primary text-ink hover:bg-primary/90 sm:w-auto">
           {save.isPending ? t("crud.saving") : t("crud.save")}
         </Button>
       </div>
@@ -241,8 +241,8 @@ function ExtrasTab({ menuId, onDone }: { menuId: number; onDone: () => void }) {
           })}
         </ul>
       )}
-      <div className="flex justify-end">
-        <Button onClick={() => save.mutate()} disabled={save.isPending} className="bg-primary text-ink hover:bg-primary/90">
+      <div className="sm:flex sm:justify-end">
+        <Button onClick={() => save.mutate()} disabled={save.isPending} className="w-full bg-primary text-ink hover:bg-primary/90 sm:w-auto">
           {save.isPending ? t("crud.saving") : t("crud.save")}
         </Button>
       </div>
@@ -346,7 +346,7 @@ function SuggestionsTab({ menuId }: { menuId: number }) {
           }}
           placeholder={t("crud.searchPlaceholder")}
           aria-label={t("crud.searchPlaceholder")}
-          className="h-10 w-full rounded-xl border border-line bg-surface ps-9 pe-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+          className="h-11 w-full rounded-xl border border-line bg-surface ps-9 pe-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 sm:h-10"
         />
       </div>
 
@@ -390,8 +390,8 @@ function SuggestionsTab({ menuId }: { menuId: number }) {
             selected={selected}
             onChange={(next) => setDrafts({ ...drafts, [active.id]: next })}
           />
-          <div className="flex justify-end">
-            <Button onClick={() => save.mutate()} disabled={save.isPending} className="bg-primary text-ink hover:bg-primary/90">
+          <div className="sm:flex sm:justify-end">
+            <Button onClick={() => save.mutate()} disabled={save.isPending} className="w-full bg-primary text-ink hover:bg-primary/90 sm:w-auto">
               {save.isPending ? t("crud.saving") : t("crud.save")}
             </Button>
           </div>

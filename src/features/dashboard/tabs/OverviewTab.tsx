@@ -36,7 +36,7 @@ function OverviewContent({ data }: { data: Overview }) {
           periodLabel={data.periodLabel}
         />
 
-        <div className="grid grid-cols-2 gap-4 lg:col-span-5">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-5">
           <KpiTile
             label={t("dashboard.kpi.orders")}
             value={formatNumber(data.orders.placed)}
@@ -125,7 +125,7 @@ function RevenueHero({
   const { t } = useTranslation();
 
   return (
-    <section className="relative flex flex-col justify-between gap-6 overflow-hidden rounded-2xl bg-night p-6 text-surface shadow-[0_12px_32px_-16px_rgba(63,62,60,0.55)] lg:col-span-7">
+    <section className="relative flex flex-col justify-between gap-5 overflow-hidden rounded-2xl bg-night p-5 text-surface shadow-[0_12px_32px_-16px_rgba(63,62,60,0.55)] sm:gap-6 sm:p-6 lg:col-span-7">
       {/* وهج أصفر من الهوية في الزاوية، يمنح البطاقة عمقاً دون أن يشوّش الرقم، والمحتوى فوقه. */}
       <span aria-hidden className="pointer-events-none absolute -top-24 -end-24 size-72 rounded-full bg-primary/20 blur-3xl" />
       <div className="relative flex items-start justify-between gap-3">
@@ -137,7 +137,7 @@ function RevenueHero({
       </div>
 
       <div className="relative">
-        <p className="text-4xl font-bold tracking-tight tabular-nums sm:text-5xl">
+        <p className="text-3xl font-bold tracking-tight tabular-nums sm:text-5xl">
           {main ? formatMoney(main.total, main.currency) : "—"}
         </p>
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-surface/70">
@@ -247,7 +247,7 @@ function TrendPanel({
       {trend.length === 0 ? (
         <EmptyState>{t("dashboard.trend.empty")}</EmptyState>
       ) : (
-        <div className="h-64 w-full" dir="ltr">
+        <div className="h-56 w-full sm:h-64" dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>

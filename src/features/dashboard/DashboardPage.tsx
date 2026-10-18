@@ -29,8 +29,9 @@ const TAB_PERMISSION: Record<Exclude<DashboardTab, "overview">, string> = {
 /** صلاحية قراءة الفروع، وبها تُعبّأ قائمة اختيار الفرع في الفلاتر. */
 const BRANCHES_PERMISSION = "branches.index";
 
+// على الهاتف حقل بعرض كامل وارتفاع 44px، وعلى الشاشات الواسعة الحجم الأصلي.
 const FIELD =
-  "h-9 rounded-xl border border-line bg-canvas px-3 text-sm text-ink outline-none transition focus:border-primary";
+  "h-11 w-full rounded-xl border border-line bg-canvas px-3 text-sm text-ink outline-none transition focus:border-primary sm:h-9 sm:w-auto";
 
 export function DashboardPage() {
   const { t } = useTranslation();
@@ -87,7 +88,7 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-1.5">
-        <h1 className="text-2xl font-bold tracking-tight text-ink">{t("dashboard.title")}</h1>
+        <h1 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">{t("dashboard.title")}</h1>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
           <span>{branchName ? t("dashboard.subtitleBranch", { branch: branchName }) : t("dashboard.subtitle")}</span>
           {generatedAt && (
@@ -99,13 +100,31 @@ export function DashboardPage() {
         </p>
       </header>
 
-      {/* شريط الفلاتر: الفترة والفرع والتاريخ المخصص في بطاقة واحدة. */}
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-[0_1px_0_rgba(23,25,31,0.04)]">
-        <Segmented label={t("dashboard.periodLabel")} value={choice} options={periodOptions} onChange={setChoice} />
+      {/* شريط الفلاتر: الفترة والفرع والتاريخ المخصص في بطاقة واحدة. على الهاتف تُكدَّس عناصره. */}
+      <div className="grid gap-3 rounded-2xl border border-line bg-surface p-3 shadow-[0_1px_0_rgba(23,25,31,0.04)] sm:flex sm:flex-wrap sm:items-center">
+        {/* على الهاتف قائمة واحدة للفترة، وعلى الشاشات الواسعة الأزرار الظاهرة كما كانت. */}
+        <div className="hidden sm:block">
+          <Segmented label={t("dashboard.periodLabel")} value={choice} options={periodOptions} onChange={setChoice} />
+        </div>
+        <Select
+          wrapperClassName="w-full sm:hidden"
+          className="w-full"
+          aria-label={t("dashboard.periodLabel")}
+          value={choice}
+          onChange={(event) => setChoice(event.target.value as PeriodChoice)}
+        >
+          {periodOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
 
         {!scope.isBranchScoped && canListBranches && (
           <Select
             icon={Store}
+            wrapperClassName="w-full sm:w-auto"
+            className="w-full sm:w-auto"
             aria-label={t("dashboard.branchLabel")}
             value={selectedBranch ?? ""}
             onChange={(event) => setSelectedBranch(event.target.value === "" ? null : Number(event.target.value))}
@@ -121,9 +140,9 @@ export function DashboardPage() {
         )}
 
         {isCustom && (
-          <div className="flex flex-wrap items-center gap-3 text-sm ms-auto">
-            <label className="relative flex items-center gap-2 text-ink-soft">
-              <CalendarDays className="pointer-events-none size-4 text-muted" aria-hidden />
+          <div className="grid grid-cols-2 gap-3 text-sm sm:ms-auto sm:flex sm:flex-wrap sm:items-center">
+            <label className="relative flex flex-col gap-1 text-ink-soft sm:flex-row sm:items-center sm:gap-2">
+              <CalendarDays className="pointer-events-none hidden size-4 text-muted sm:block" aria-hidden />
               {t("dashboard.from")}
               <input
                 type="date"
@@ -133,7 +152,7 @@ export function DashboardPage() {
                 className={FIELD}
               />
             </label>
-            <label className="flex items-center gap-2 text-ink-soft">
+            <label className="flex flex-col gap-1 text-ink-soft sm:flex-row sm:items-center sm:gap-2">
               {t("dashboard.to")}
               <input
                 type="date"
@@ -160,7 +179,8 @@ export function DashboardPage() {
                 aria-selected={active}
                 onClick={() => setTab(option.value)}
                 className={clsx(
-                  "-mb-px cursor-pointer whitespace-nowrap border-b-2 px-4 pb-3 pt-1 text-sm font-medium transition",
+                  // على الهاتف ارتفاع اللمس 44px، وعلى الشاشات الواسعة الحجم الأصلي.
+                  "-mb-px cursor-pointer whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition sm:pb-3 sm:pt-1",
                   active ? "border-primary text-ink" : "border-transparent text-muted hover:border-line hover:text-ink"
                 )}
               >

@@ -239,6 +239,8 @@ export const itemsModule = (t: TFunction): CrudModule<Named> => ({
       ],
       // لكل قائمة يُضاف إليها الصنف سعرها ووحدتها، فلا سعر واحد يصلح لكل القوائم.
       newRow: { menu_id: null, price: null, currency: null },
+      // سعر الوجبة لكل قائمة: يظهر في التفاصيل فقط، ويحدده الخادم من إعدادات القائمة.
+      viewColumns: [{ key: "meal_price", label: t("crud.field.mealPrice"), kind: "number" }],
     },
   ],
   columns: [

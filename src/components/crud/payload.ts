@@ -93,10 +93,15 @@ export function defaultValues(fields: FieldDef[], record: RecordLike | null): Va
           : list;
         values[field.key] = ordered.map((row) => {
           const copy: RecordLike = { ...row };
+          // قيم الصف قد تأتي في `pivot` لعلاقة الصنف بالقائمة، فتُؤخذ منه إن غابت عن الصف نفسه.
+          const pivot = row.pivot && typeof row.pivot === "object" ? (row.pivot as RecordLike) : {};
           for (const column of field.columns) {
             if (column.kind !== "select") continue;
             // الصف نفسه هو السجل المرتبط إن لم يأتِ معرّف العلاقة (كما يفعل الأصل بـ `item_id || id`).
-            copy[column.key] = relationValue(row, column.key) ?? (column.self ? idOf(row.id) : null);
+            // وقيمة مثل العملة (نص لا معرّف) تُؤخذ من الـ pivot إن لم تكن على الصف.
+            const fromPivot = pivot[column.key];
+            const pivotValue = typeof fromPivot === "string" || typeof fromPivot === "number" ? fromPivot : null;
+            copy[column.key] = relationValue(row, column.key) ?? (column.self ? idOf(row.id) : null) ?? pivotValue;
             // اسم العلاقة يُحفظ مع الصف ليظهر حتى قبل وصول قائمة الخيارات.
             const nested = row[column.key.replace(/_id$/, "")];
             if (nested && typeof nested === "object") {
@@ -105,10 +110,9 @@ export function defaultValues(fields: FieldDef[], record: RecordLike | null): Va
               copy[`${column.key}__label`] = localizedRecord(row as RawBilingual, currentLanguage());
             }
           }
-          // قيم الصف قد تأتي في `pivot` لعلاقة الصنف بالقائمة، فتُؤخذ منه إن غابت عن الصف نفسه.
-          const pivot = row.pivot && typeof row.pivot === "object" ? (row.pivot as RecordLike) : {};
-          for (const column of field.columns) {
-            if (column.kind === "select" || copy[column.key] !== undefined) continue;
+          for (const column of [...field.columns, ...(field.viewColumns ?? [])]) {
+            // الـ null على الصف يعني «لم يُحدَّد» كالغياب، فيُؤخذ الـ pivot في الحالتين.
+            if (column.kind === "select" || (copy[column.key] !== undefined && copy[column.key] !== null)) continue;
             if (pivot[column.key] !== undefined) copy[column.key] = pivot[column.key];
           }
           return copy;

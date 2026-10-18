@@ -1,57 +1,45 @@
 import { useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Bell, BellOff, ChevronDown, Eye, Lock, RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Bell, BellOff, Eye } from "lucide-react";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { SelectField } from "@/components/ui/Fields";
 import { RemoteSelect } from "@/components/ui/RemoteSelect";
 import { Select } from "@/components/ui/Select";
-import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
+import { FilterSheet, type ActiveFilter } from "@/components/ui/FilterSheet";
+import { ResponsiveRecordList, type RecordColumn } from "@/components/ui/ResponsiveRecordList";
 import { Skeleton } from "@/components/ui/Bars";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { useBranchScope, usePermissions } from "@/features/auth/hooks";
 import { ADMIN_DRIVER_PERMISSIONS } from "@/features/drivers/permissions";
 import { driverFilterSource } from "@/features/drivers/driverSource";
 import { currentLanguage } from "@/i18n";
-import { asRecord, toNumber, toText } from "@/lib/coerce";
+import { toNumber, toText } from "@/lib/coerce";
 import { formatDateTime, formatMoney, formatNumber } from "@/lib/format";
-import { localizedRecord } from "@/lib/localized";
 import { remoteSource } from "@/modules/shared";
 import { branches, listAll, orderAdmin, type Named } from "@/services";
 import { OrderInvoice } from "./OrderInvoice";
 import { StatusPicker } from "./StatusPicker";
-import { statusDotClass } from "./statusTone";
-import { ORDER_STATUSES, isFinalOrder, serverLabelOf } from "./orderStatus";
+import { ORDER_STATUSES } from "./orderStatus";
 import { AssignDriverDialog } from "./AssignDriverDialog";
-import { canAssignDriver } from "./driverAssignment";
 import { useNewOrderAlert } from "./newOrderAlert";
-
-type OrderType = "delivery" | "pickup";
+import { OrderCard } from "./OrderCard";
+import { DriverCell, RatingStars, StatusTrigger, TypeChip } from "./OrderRowParts";
+import { branchOf, customerOf, refOf, typeOf, type OrderType } from "./orderRows";
 
 // الفروع تُبحث في الخادم عشرين في الصفحة، كما في قائمة الفرع عند إنشاء الطلب.
 const BRANCH_FILTER = remoteSource("branches", branches);
 
 const PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
-/** نوع الطلب كما يعرفه الخادم: توصيل، أو استلام من الفرع (ومنه طلبات نقطة البيع). */
-const typeOf = (row: Named): OrderType => (toText(row.delivery_type) === "delivery" ? "delivery" : "pickup");
-
-const refOf = (row: Named) => toText(row.order_number) || `#${String(row.id)}`;
-
-const customerOf = (row: Named) => {
-  const customer = asRecord(row.customer);
-  return {
-    name: toText(customer.name) || toText(row.customer_name) || "—",
-    phone: toText(customer.phone),
-  };
-};
-
 /**
  * صفحة الطلبات: فلاتر الحالة والنوع والفرع والتاريخ والتقييم، ونوع الطلب في الجدول،
  * وتغيير الحالة من نافذة واضحة تعرض مراحل الطلب والخطوات المسموحة فقط.
+ *
+ * على الهاتف تصير الصفوف كروتاً، والفلاتر زراً يفتح نافذة سفلية. الجدول والكروت يعرضان البيانات
+ * نفسها بالإجراءات نفسها، وتظهر الأعمدة الثانوية في الجدول كلما اتسعت الشاشة.
  */
 export function OrdersPage() {
   const { t } = useTranslation();
@@ -147,6 +135,249 @@ export function OrdersPage() {
     setPage(1);
   };
 
+  // الفلاتر النشطة: تظهر على الهاتف شارات قابلة للإزالة. فرع الحساب المقصور لا يُعد فلتراً، لأنه ثابت.
+  const activeFilters: ActiveFilter[] = [];
+  if (status) {
+    activeFilters.push({
+      key: "status",
+      label: t(`orders.status.${status}`),
+      onRemove: () => {
+        setStatus("");
+        setPage(1);
+      },
+    });
+  }
+  if (typeFilter) {
+    activeFilters.push({
+      key: "type",
+      label: typeFilter === "delivery" ? t("orderInvoice.delivery") : t("orderInvoice.pickup"),
+      onRemove: () => {
+        setTypeFilter("");
+        setPage(1);
+      },
+    });
+  }
+  if (!scope.isBranchScoped && branchFilter !== null) {
+    activeFilters.push({
+      key: "branch",
+      label: branchLabel || String(branchFilter),
+      onRemove: () => {
+        setBranchFilter(null);
+        setBranchLabel("");
+        setPage(1);
+      },
+    });
+  }
+  if (driverChoice) {
+    activeFilters.push({
+      key: "driver",
+      label: driverChoice === "needs" ? t("drivers.assign.needsDriver") : driverLabel || driverChoice,
+      onRemove: () => {
+        setDriverChoice("");
+        setDriverLabel("");
+        setPage(1);
+      },
+    });
+  }
+  if (date) {
+    activeFilters.push({
+      key: "date",
+      label: date,
+      onRemove: () => {
+        setDate("");
+        setPage(1);
+      },
+    });
+  }
+  if (maxRating) {
+    activeFilters.push({
+      key: "rating",
+      label: t("ordersPage.stars", { n: maxRating }),
+      onRemove: () => {
+        setMaxRating("");
+        setPage(1);
+      },
+    });
+  }
+
+  // أعمدة الجدول. الثانوية منها تظهر عند اتساع الشاشة، والإجراءات تبقى دائماً.
+  const columns: RecordColumn<Named>[] = [
+    {
+      key: "number",
+      header: t("orders.table.number"),
+      cell: (row) =>
+        canView ? (
+          <button
+            type="button"
+            onClick={() => setViewing(row)}
+            className="cursor-pointer font-mono font-semibold text-ink hover:text-secondary"
+          >
+            {refOf(row)}
+          </button>
+        ) : (
+          <span className="font-mono font-semibold text-ink">{refOf(row)}</span>
+        ),
+    },
+    {
+      key: "created",
+      header: t("orders.table.created"),
+      from: "xl",
+      cell: (row) => (
+        <span className="whitespace-nowrap text-xs tabular-nums text-muted">
+          {formatDateTime(toText(row.created_at) || null)}
+        </span>
+      ),
+    },
+    {
+      key: "customer",
+      header: t("orders.table.customer"),
+      cell: (row) => {
+        const customer = customerOf(row);
+        return (
+          <>
+            <p className="max-w-48 truncate font-medium text-ink">{customer.name}</p>
+            {customer.phone && (
+              <p dir="ltr" className="text-xs tabular-nums text-muted">
+                {customer.phone}
+              </p>
+            )}
+          </>
+        );
+      },
+    },
+    {
+      key: "type",
+      header: t("ordersPage.colType"),
+      from: "lg",
+      cell: (row) => <TypeChip type={typeOf(row)} />,
+    },
+    {
+      key: "driver",
+      header: t("ordersPage.colDriver"),
+      from: "lg",
+      cell: (row) => <DriverCell row={row} canAssign={canAssign} onAssign={() => setAssigning(row)} />,
+    },
+    {
+      key: "branch",
+      header: t("ordersPage.colBranch"),
+      from: "xl",
+      cell: (row) => <span className="block max-w-40 truncate text-ink-soft">{branchOf(row, language)}</span>,
+    },
+    {
+      key: "total",
+      header: t("orders.table.total"),
+      align: "end",
+      cell: (row) => (
+        <span className="font-semibold tabular-nums text-ink">
+          {formatMoney(toNumber(row.final_price), toText(row.currency))}
+        </span>
+      ),
+    },
+    {
+      key: "rating",
+      header: t("ordersPage.colRating"),
+      from: "xl",
+      cell: (row) => <RatingStars row={row} />,
+    },
+    {
+      key: "status",
+      header: t("orders.table.status"),
+      cell: (row) => (
+        <StatusTrigger row={row} canChange={canChangeStatus} onOpen={() => setPicking(row)} />
+      ),
+    },
+    {
+      key: "actions",
+      header: null,
+      align: "end",
+      cell: (row) =>
+        canView && (
+          <button
+            type="button"
+            onClick={() => setViewing(row)}
+            aria-label={t("ordersPage.view")}
+            title={t("ordersPage.view")}
+            className="grid size-11 cursor-pointer place-items-center rounded-xl text-ink-soft ring-1 ring-line transition hover:ring-primary xl:size-8 xl:rounded-lg"
+          >
+            <Eye className="size-4" aria-hidden />
+          </button>
+        ),
+    },
+  ];
+
+  // حقول الفلاتر. تُعرض في الشريط على الشاشات الواسعة، وفي النافذة السفلية على الهاتف.
+  const filterFields = (
+    <>
+      <SelectField
+        label={t("ordersPage.statusFilter")}
+        options={ORDER_STATUSES.map((value) => ({ value, label: t(`orders.status.${value}`) }))}
+        value={status || null}
+        placeholder={t("ordersPage.allStatuses")}
+        onChange={(value) => {
+          setStatus(value === null ? "" : String(value));
+          setPage(1);
+        }}
+      />
+      <SelectField
+        label={t("ordersPage.typeFilter")}
+        options={[
+          { value: "delivery", label: t("orderInvoice.delivery") },
+          { value: "pickup", label: t("orderInvoice.pickup") },
+        ]}
+        value={typeFilter || null}
+        placeholder={t("ordersPage.allTypes")}
+        onChange={(value) => {
+          setTypeFilter(value === null ? "" : (String(value) as OrderType));
+          setPage(1);
+        }}
+      />
+      <RemoteSelect
+        label={t("ordersPage.branchFilter")}
+        source={BRANCH_FILTER}
+        value={branchId}
+        fallbackLabel={branchLabel || undefined}
+        disabled={scope.isBranchScoped}
+        placeholder={t("ordersPage.allBranches")}
+        onChange={(value, label) => {
+          setBranchFilter(value === null ? null : Number(value));
+          setBranchLabel(label);
+          setPage(1);
+        }}
+      />
+      <RemoteSelect
+        label={t("ordersPage.driverFilter")}
+        source={driverFilter}
+        value={driverChoice || null}
+        fallbackLabel={driverLabel || undefined}
+        placeholder={t("ordersPage.allDrivers")}
+        onChange={(value, label) => {
+          setDriverChoice(value === null ? "" : String(value));
+          setDriverLabel(label);
+          setPage(1);
+        }}
+      />
+      <Input
+        label={t("ordersPage.dateFilter")}
+        type="date"
+        value={date}
+        onChange={(event) => {
+          setDate(event.target.value);
+          setPage(1);
+        }}
+      />
+      <SelectField
+        label={t("ordersPage.ratingFilter")}
+        options={[1, 2, 3, 4, 5].map((value) => ({ value: String(value), label: t("ordersPage.stars", { n: value }) }))}
+        value={maxRating || null}
+        placeholder={t("ordersPage.allRatings")}
+        onChange={(value) => {
+          setMaxRating(value === null ? "" : String(value));
+          setPage(1);
+        }}
+      />
+    </>
+  );
+
   if (!canList) return <EmptyState>{t("ordersPage.noAccess")}</EmptyState>;
 
   return (
@@ -160,91 +391,22 @@ export function OrdersPage() {
           type="button"
           onClick={alert.toggleSound}
           aria-pressed={alert.soundOn}
+          aria-label={alert.soundOn ? t("ordersPage.soundOff") : t("ordersPage.soundOn")}
           title={t("ordersPage.soundHint")}
-          className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl px-4 text-sm font-medium ring-1 ring-line transition hover:ring-primary"
+          className="inline-flex size-11 cursor-pointer items-center justify-center gap-2 rounded-xl text-sm font-medium ring-1 ring-line transition hover:ring-primary sm:h-10 sm:w-auto sm:px-4"
         >
           {alert.soundOn ? (
             <Bell className="size-4 text-secondary" aria-hidden />
           ) : (
             <BellOff className="size-4 text-muted" aria-hidden />
           )}
-          {alert.soundOn ? t("ordersPage.soundOff") : t("ordersPage.soundOn")}
+          <span className="hidden sm:inline">{alert.soundOn ? t("ordersPage.soundOff") : t("ordersPage.soundOn")}</span>
         </button>
       </header>
 
-      <section className="grid gap-3 rounded-2xl border border-line bg-surface p-4 sm:grid-cols-2 xl:grid-cols-7">
-        <SelectField
-          label={t("ordersPage.statusFilter")}
-          options={ORDER_STATUSES.map((value) => ({ value, label: t(`orders.status.${value}`) }))}
-          value={status || null}
-          placeholder={t("ordersPage.allStatuses")}
-          onChange={(value) => {
-            setStatus(value === null ? "" : String(value));
-            setPage(1);
-          }}
-        />
-        <SelectField
-          label={t("ordersPage.typeFilter")}
-          options={[
-            { value: "delivery", label: t("orderInvoice.delivery") },
-            { value: "pickup", label: t("orderInvoice.pickup") },
-          ]}
-          value={typeFilter || null}
-          placeholder={t("ordersPage.allTypes")}
-          onChange={(value) => {
-            setTypeFilter(value === null ? "" : (String(value) as OrderType));
-            setPage(1);
-          }}
-        />
-        <RemoteSelect
-          label={t("ordersPage.branchFilter")}
-          source={BRANCH_FILTER}
-          value={branchId}
-          fallbackLabel={branchLabel || undefined}
-          disabled={scope.isBranchScoped}
-          placeholder={t("ordersPage.allBranches")}
-          onChange={(value, label) => {
-            setBranchFilter(value === null ? null : Number(value));
-            setBranchLabel(label);
-            setPage(1);
-          }}
-        />
-        <RemoteSelect
-          label={t("ordersPage.driverFilter")}
-          source={driverFilter}
-          value={driverChoice || null}
-          fallbackLabel={driverLabel || undefined}
-          placeholder={t("ordersPage.allDrivers")}
-          onChange={(value, label) => {
-            setDriverChoice(value === null ? "" : String(value));
-            setDriverLabel(label);
-            setPage(1);
-          }}
-        />
-        <Input
-          label={t("ordersPage.dateFilter")}
-          type="date"
-          value={date}
-          onChange={(event) => {
-            setDate(event.target.value);
-            setPage(1);
-          }}
-        />
-        <SelectField
-          label={t("ordersPage.ratingFilter")}
-          options={[1, 2, 3, 4, 5].map((value) => ({ value: String(value), label: t("ordersPage.stars", { n: value }) }))}
-          value={maxRating || null}
-          placeholder={t("ordersPage.allRatings")}
-          onChange={(value) => {
-            setMaxRating(value === null ? "" : String(value));
-            setPage(1);
-          }}
-        />
-        <Button variant="ghost" onClick={resetFilters} className="self-end">
-          <RotateCcw className="size-4" aria-hidden />
-          {t("ordersPage.resetFilters")}
-        </Button>
-      </section>
+      <FilterSheet activeFilters={activeFilters} onReset={resetFilters}>
+        {filterFields}
+      </FilterSheet>
 
       <section className="rounded-2xl border border-line bg-surface">
         {loading ? (
@@ -256,86 +418,23 @@ export function OrdersPage() {
         ) : rows.length === 0 ? (
           <EmptyState>{t("ordersPage.empty")}</EmptyState>
         ) : (
-          <div className="overflow-x-auto rounded-t-2xl">
-            <table className="w-full min-w-[1080px] text-sm">
-              <thead className="bg-secondary text-xs font-semibold text-surface">
-                <tr>
-                  <th className="px-4 py-3 text-start font-medium">{t("orders.table.number")}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t("orders.table.created")}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t("orders.table.customer")}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t("ordersPage.colType")}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t("ordersPage.colDriver")}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t("ordersPage.colBranch")}</th>
-                  <th className="px-4 py-3 text-end font-medium">{t("orders.table.total")}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t("ordersPage.colRating")}</th>
-                  <th className="px-4 py-3 text-start font-medium">{t("orders.table.status")}</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {rows.map((row) => {
-                  const customer = customerOf(row);
-                  return (
-                    <tr key={String(row.id)} className="align-middle hover:bg-canvas/60">
-                      <td className="px-4 py-3">
-                        {canView ? (
-                          <button
-                            type="button"
-                            onClick={() => setViewing(row)}
-                            className="cursor-pointer font-mono font-semibold text-ink hover:text-secondary"
-                          >
-                            {refOf(row)}
-                          </button>
-                        ) : (
-                          <span className="font-mono font-semibold text-ink">{refOf(row)}</span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-xs tabular-nums text-muted">
-                        {formatDateTime(toText(row.created_at) || null)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-ink">{customer.name}</p>
-                        {customer.phone && <p dir="ltr" className="text-xs tabular-nums text-muted">{customer.phone}</p>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <TypeChip type={typeOf(row)} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <DriverCell row={row} canAssign={canAssign} onAssign={() => setAssigning(row)} />
-                      </td>
-                      <td className="px-4 py-3 text-ink-soft">
-                        {typeof row.branch === "string"
-                          ? row.branch
-                          : localizedRecord(asRecord(row.branch), language) || localizedRecord(asRecord(row.menu), language) || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-end font-semibold tabular-nums text-ink">
-                        {formatMoney(toNumber(row.final_price), toText(row.currency))}
-                      </td>
-                      <td className="px-4 py-3">
-                        <RatingStars row={row} />
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusTrigger row={row} canChange={canChangeStatus} onOpen={() => setPicking(row)} />
-                      </td>
-                      <td className="px-4 py-3 text-end">
-                        {canView && (
-                          <button
-                            type="button"
-                            onClick={() => setViewing(row)}
-                            aria-label={t("ordersPage.view")}
-                            title={t("ordersPage.view")}
-                            className="grid size-8 cursor-pointer place-items-center rounded-lg text-ink-soft ring-1 ring-line transition hover:ring-primary"
-                          >
-                            <Eye className="size-4" aria-hidden />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ResponsiveRecordList
+            label={t("nav.orders")}
+            rows={rows}
+            getKey={(row) => String(row.id)}
+            columns={columns}
+            renderCard={(row) => (
+              <OrderCard
+                row={row}
+                canView={canView}
+                canAssign={canAssign}
+                canChangeStatus={canChangeStatus}
+                onView={() => setViewing(row)}
+                onAssign={() => setAssigning(row)}
+                onChangeStatus={() => setPicking(row)}
+              />
+            )}
+          />
         )}
 
         {meta && rows.length > 0 && (
@@ -369,81 +468,5 @@ export function OrdersPage() {
         </Dialog>
       )}
     </div>
-  );
-}
-
-/** زر الحالة في الجدول: نقطة اللون والتسمية الرسمية، ويفتح نافذة التغيير بنقرة واحدة. */
-function StatusTrigger({ row, canChange, onOpen }: { row: Named; canChange: boolean; onOpen: () => void }) {
-  const { t } = useTranslation();
-  const language = currentLanguage();
-  const current = toText(row.status);
-  const final = isFinalOrder(row);
-  const locked = !canChange || final;
-
-  return (
-    <button
-      type="button"
-      disabled={locked}
-      onClick={onOpen}
-      title={final ? t("ordersPage.finalLocked") : t("ordersPage.changeStatus")}
-      className="inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium text-ink transition hover:border-primary disabled:cursor-not-allowed disabled:opacity-70"
-    >
-      <span className={`size-2.5 shrink-0 rounded-full ${statusDotClass(current)}`} aria-hidden />
-      <span className="truncate">{serverLabelOf(row, current, language) ?? t(`orders.status.${current}`, { defaultValue: current })}</span>
-      {final ? (
-        <Lock className="size-3.5 shrink-0 text-muted" aria-hidden />
-      ) : (
-        canChange && <ChevronDown className="size-3.5 shrink-0 text-muted" aria-hidden />
-      )}
-    </button>
-  );
-}
-
-/**
- * عمود السائق: اسم السائق، أو تنبيه «بانتظار سائق» لتوصيل بلا سائق. زر الإسناد يظهر
- * لمن يملك صلاحيته، وللطلب الذي ما زال قبل الاستلام من الفرع.
- */
-function DriverCell({ row, canAssign, onAssign }: { row: Named; canAssign: boolean; onAssign: () => void }) {
-  const { t } = useTranslation();
-  if (toText(row.delivery_type) !== "delivery") return <span className="text-muted">—</span>;
-
-  const name = toText(asRecord(row.driver).name);
-  const editable = canAssign && canAssignDriver(row);
-
-  return (
-    <div className="space-y-1">
-      {name ? (
-        <p className="font-medium text-ink">{name}</p>
-      ) : (
-        <Badge tone="warn">{t("drivers.assign.needsDriver")}</Badge>
-      )}
-      {editable && (
-        <button
-          type="button"
-          onClick={onAssign}
-          className="cursor-pointer text-xs font-medium text-secondary hover:underline"
-        >
-          {name ? t("drivers.assign.change") : t("drivers.assign.assign")}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function TypeChip({ type }: { type: OrderType }) {
-  const { t } = useTranslation();
-  const tone = type === "delivery" ? "bg-primary text-ink" : "bg-secondary-soft text-secondary";
-  const label = type === "delivery" ? t("orderInvoice.delivery") : t("orderInvoice.pickup");
-  return <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{label}</span>;
-}
-
-function RatingStars({ row }: { row: Named }) {
-  const rating = Math.round(toNumber(row.rating));
-  if (rating <= 0) return <span className="text-muted">—</span>;
-  return (
-    <span className="whitespace-nowrap text-warn" title={toText(row.rating_note) || undefined}>
-      {"★".repeat(rating)}
-      <span className="text-line">{"★".repeat(5 - rating)}</span>
-    </span>
   );
 }

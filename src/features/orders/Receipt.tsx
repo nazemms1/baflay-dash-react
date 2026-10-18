@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Check, Clock, Printer } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { Segmented } from "@/components/ui/Segmented";
 import { usePermissions } from "@/features/auth/hooks";
 import { currentLanguage } from "@/i18n";
 import { formatMoney } from "@/lib/format";
@@ -43,16 +44,37 @@ export interface ReceiptData {
 
 const DONE_STATUS = "completed";
 
+type Paper = "80" | "58";
+const PAPER_KEY = "receiptPaper";
+
+/** آخر ورق اختاره الكاشير على هذا الجهاز، والافتراضي 80mm كما كان. التخزين اختياري فيُتجاهل خطؤه. */
+function savedPaper(): Paper {
+  try {
+    return localStorage.getItem(PAPER_KEY) === "58" ? "58" : "80";
+  } catch {
+    return "80";
+  }
+}
+
 /**
  * إيصال الدفع النقدي للكاشير: هوية المطعم ورقم الطلب وحالته في الرأس، ثم الفرع والكاشير
  * والزبون والتاريخ، ثم الأصناف بإضافاتها وكمياتها وأسعار وحداتها، ثم الحساب والإجمالي بارزاً.
- * زر «تسليم الطلب» يكمل الطلب بنقرة واحدة، والطباعة تُخرج الإيصال وحده بعرض 80mm.
+ * زر «تسليم الطلب» يكمل الطلب بنقرة واحدة، والطباعة تُخرج الإيصال وحده بعرض 80mm أو 58mm حسب ورق الطابعة المختار.
  */
 export function Receipt({ data, onClose }: { data: ReceiptData; onClose: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const language = currentLanguage();
   const [status, setStatus] = useState(data.status);
+  const [paper, setPaper] = useState<Paper>(savedPaper);
+  const choosePaper = (next: Paper) => {
+    setPaper(next);
+    try {
+      localStorage.setItem(PAPER_KEY, next);
+    } catch {
+      // التخزين غير متاح: يبقى الاختيار لهذه النافذة فقط.
+    }
+  };
   // التسليم تغيير حالة، فيحتاج صلاحية تغيير الحالة كأي تغيير آخر.
   const canFinish = usePermissions().has("admin.orders.status.update") && data.orderId > 0;
   const done = status === DONE_STATUS;
@@ -96,9 +118,23 @@ export function Receipt({ data, onClose }: { data: ReceiptData; onClose: () => v
         </>
       }
     >
+      <div className="mx-auto mb-4 flex max-w-sm items-center justify-between gap-3 text-sm">
+        <span className="text-muted">{t("receipt.paper")}</span>
+        <Segmented<Paper>
+          label={t("receipt.paper")}
+          value={paper}
+          onChange={choosePaper}
+          options={[
+            { value: "80", label: "80mm" },
+            { value: "58", label: "58mm" },
+          ]}
+        />
+      </div>
       <article
         id="print-area"
-        className="receipt-print mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-line bg-surface text-ink shadow-sm"
+        className={`receipt-print mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-line bg-surface text-ink shadow-sm ${
+          paper === "58" ? "receipt-58" : ""
+        }`}
       >
         <header className="bg-primary px-6 pb-8 pt-7 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-soft">{t("receipt.kicker")}</p>

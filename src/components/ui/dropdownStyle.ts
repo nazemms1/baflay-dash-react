@@ -7,7 +7,7 @@ import clsx from "clsx";
  */
 export function dropdownClass({ error, open }: { error?: boolean; open?: boolean } = {}): string {
   return clsx(
-    "h-9 rounded-xl border bg-canvas px-3 text-sm text-ink outline-none transition",
+    "h-11 rounded-xl border bg-canvas px-3 text-sm text-ink outline-none transition sm:h-9",
     "focus:border-primary disabled:cursor-not-allowed disabled:opacity-60",
     error ? "border-danger" : "border-line",
     open && "border-primary"

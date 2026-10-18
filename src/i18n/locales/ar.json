@@ -28,7 +28,12 @@
     "date": "التاريخ",
     "username": "اسم المستخدم",
     "createdAt": "تاريخ الإنشاء",
-    "pagination": "التنقل بين الصفحات"
+    "pagination": "التنقل بين الصفحات",
+    "filters": "الفلاتر",
+    "filtersCount": "الفلاتر ({{count}})",
+    "resetFilters": "إعادة ضبط",
+    "showResults": "عرض النتائج",
+    "removeFilter": "إزالة الفلتر"
   },
   "nav": {
     "groups": {
@@ -342,6 +347,7 @@
       "item": "الصنف",
       "deliveryArea": "موقع الفرع ونطاق التوصيل",
       "menuCurrency": "عملة القائمة",
+      "mealPrice": "سعر الوجبة",
       "country": "البلد",
       "isAcceptingDelivery": "يقبل التوصيل",
       "menu": "القائمة",
@@ -458,7 +464,8 @@
     "options": "خيارات",
     "noItems": "لا توجد أصناف في هذا الفرع.",
     "cart": "السلة",
-    "emptyCart": "السلة فارغة. اضغط على صنف لإضافته.",
+    "openCart": "عرض السلة",
+    "emptyCart":"السلة فارغة. اضغط على صنف لإضافته.",
     "customBurgerName": "برغر مخصص: {{list}}",
     "subtotal": "المجموع الفرعي",
     "tax": "الضريبة (10%)",
@@ -944,6 +951,7 @@
   },
   "receipt": {
     "kicker": "إيصال",
+    "paper": "ورق الطابعة",
     "orderNo": "رقم الطلب",
     "dateTime": "التاريخ والوقت",
     "cashier": "الكاشير",

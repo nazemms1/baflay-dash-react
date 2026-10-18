@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Minus, Plus, Search, Trash2 } from "lucide-react";
+import { Minus, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
@@ -52,6 +52,9 @@ interface PosRegisterProps {
  * شاشة البيع للكاشير: الأصناف مباشرة حسب التصنيف، والنقرة على الصنف تضيفه إلى السلة، وزر
  * الخيارات يفتح الساندويش أو الوجبة والإضافات والصلصات. السلة هنا على الجهاز، ولا يُنشأ
  * شيء في الخادم إلا عند الدفع، فيُرسل الطلب كله بنداء واحد، ويكون داخلياً بقرار الخادم.
+ *
+ * على الشاشات الواسعة السلة عمود جانبي ثابت. على الهاتف والتابلت شريط أسفل الشاشة يعرض
+ * الإجمالي، ويفتح السلة نفسها في نافذة ملء الشاشة.
  */
 export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegisterProps) {
   const { t } = useTranslation();
@@ -71,6 +74,8 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  // السلة على الهاتف والتابلت نافذة تُفتح من الشريط السفلي.
+  const [cartOpen, setCartOpen] = useState(false);
 
   const branchName = localizedRecord(branch, language) || `#${toNumber(branch.id)}`;
   const branchAddress = localizedRecord({ name: branch.address, name_ar: branch.address_ar }, language);
@@ -132,6 +137,32 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
   };
 
   const totals = cartTotals(lines);
+
+  // كم قطعة من الصنف في السلة الآن، لتظهر على بطاقته فيعرف الكاشير أنه أُضيف.
+  const countInCart = (itemId: number) =>
+    lines.reduce((sum, line) => (line.kind === "item" && line.itemId === itemId ? sum + line.quantity : sum), 0);
+
+  // السطر البسيط: صنف بلا خيارات، بالتعريف نفسه في addPlain. زر «−» على البطاقة ينقص منه وحده.
+  const isPlainLine = (line: CartLine, itemId: number) =>
+    line.kind === "item" &&
+    line.itemId === itemId &&
+    line.variant === "sandwich" &&
+    line.addOns.length === 0 &&
+    line.sauces.length === 0 &&
+    line.notes === "";
+  const hasPlain = (itemId: number) => lines.some((line) => isPlainLine(line, itemId));
+  const removeOne = (itemId: number) =>
+    setLines((current) => {
+      const index = current.findIndex((line) => isPlainLine(line, itemId));
+      if (index < 0) return current;
+      const match = current[index];
+      if (match.kind === "item" && match.quantity > 1) {
+        return current.map((line, position) =>
+          position === index && line.kind === "item" ? { ...line, quantity: line.quantity - 1 } : line
+        );
+      }
+      return current.filter((_, position) => position !== index);
+    });
 
   const lineName = (line: CartLine): string =>
     line.kind === "burger"
@@ -283,8 +314,115 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
     ...categories.map((category) => ({ id: category.id, label: category.label })),
   ];
 
+  // محتوى السلة الواحد يُعرض في العمود الجانبي على الشاشات الواسعة، وفي النافذة على غيرها.
+  const cartContent = (
+    <>
+      {lines.length === 0 ? (
+        <EmptyState>{t("createOrder.emptyCart")}</EmptyState>
+      ) : (
+        <ul className="divide-y divide-line">
+          {lines.map((line) => (
+            <li key={line.key} className="space-y-2 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{lineName(line)}</p>
+                  {lineDetail(line) && <p className="text-xs text-muted">{lineDetail(line)}</p>}
+                </div>
+                <button
+                  type="button"
+                  aria-label={t("crud.delete")}
+                  disabled={pay.isPending}
+                  onClick={() => removeLine(line.key)}
+                  className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-lg text-secondary hover:bg-secondary-soft sm:size-8"
+                >
+                  <Trash2 className="size-4" aria-hidden />
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label={t("createOrder.less")}
+                    disabled={line.quantity <= 1 || pay.isPending}
+                    onClick={() => setQuantity(line.key, line.quantity - 1)}
+                    className="grid size-11 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40 sm:size-7"
+                  >
+                    <Minus className="size-3.5" aria-hidden />
+                  </button>
+                  <span className="w-8 text-center text-sm font-semibold tabular-nums">{line.quantity}</span>
+                  <button
+                    type="button"
+                    aria-label={t("createOrder.more")}
+                    disabled={line.quantity >= TILL_MAX_QUANTITY || pay.isPending}
+                    onClick={() => setQuantity(line.key, line.quantity + 1)}
+                    className="grid size-11 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40 sm:size-7"
+                  >
+                    <Plus className="size-3.5" aria-hidden />
+                  </button>
+                </div>
+                <span className="text-sm font-semibold tabular-nums">{formatMoney(line.unitPrice * line.quantity, line.currency)}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {lines.length > 0 && (
+        <dl className="mt-4 space-y-1 border-t border-line pt-4 text-sm">
+          <div className="flex justify-between text-ink-soft">
+            <dt>{t("createOrder.subtotal")}</dt>
+            <dd className="tabular-nums">{formatMoney(totals.subtotal, currency)}</dd>
+          </div>
+          <div className="flex justify-between text-ink-soft">
+            <dt>{t("createOrder.tax")}</dt>
+            <dd className="tabular-nums">{formatMoney(totals.tax, currency)}</dd>
+          </div>
+          <div className="flex justify-between text-base font-bold">
+            <dt>{t("createOrder.total")}</dt>
+            <dd className="tabular-nums">{formatMoney(totals.total, currency)}</dd>
+          </div>
+        </dl>
+      )}
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+        <Input
+          label={t("createOrder.customerName")}
+          value={customerName}
+          maxLength={100}
+          onChange={(event) => setCustomerName(event.target.value)}
+        />
+        <Input
+          label={t("createOrder.customerPhone")}
+          value={customerPhone}
+          dir="ltr"
+          inputMode="tel"
+          maxLength={20}
+          onChange={(event) => setCustomerPhone(event.target.value)}
+        />
+      </div>
+
+      <div className="mt-4 space-y-2">
+        <Button
+          disabled={!canCreate || lines.length === 0 || pay.isPending}
+          onClick={() => setConfirm("pay")}
+          className="w-full bg-primary text-ink hover:bg-primary/90"
+        >
+          {t("createOrder.pay")}
+        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="ghost" disabled={lines.length === 0 || pay.isPending} onClick={() => setConfirm("clear")}>
+            {t("createOrder.clearCart")}
+          </Button>
+          <Button variant="danger" disabled={pay.isPending} onClick={() => setConfirm("discard")}>
+            {t("createOrder.discardCart")}
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+
   return (
-    <div className="grid gap-6 lg:grid-cols-12">
+    <div className="grid gap-6 pb-28 lg:grid-cols-12 lg:pb-0">
       <section className="min-w-0 space-y-4 lg:col-span-8">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
@@ -327,7 +465,7 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
                   setActive(chip.id);
                   setTilePage(1);
                 }}
-                className={`shrink-0 cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition ${on ? "bg-primary text-ink" : "ring-1 ring-line hover:bg-primary-soft"}`}
+                className={`shrink-0 cursor-pointer rounded-full px-4 py-2.5 text-sm font-medium transition sm:py-2 ${on ? "bg-primary text-ink" : "ring-1 ring-line hover:bg-primary-soft"}`}
               >
                 {chip.label}
               </button>
@@ -340,7 +478,12 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
         ) : (
           <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             {tiles.items.map((item) => (
-              <li key={item.id} className="flex flex-col overflow-hidden rounded-2xl border border-line bg-surface transition hover:border-primary">
+              <li
+                key={item.id}
+                className={`relative flex flex-col overflow-hidden rounded-2xl border bg-surface transition hover:border-primary ${
+                  countInCart(item.id) > 0 ? "border-primary ring-2 ring-primary/40" : "border-line"
+                }`}
+              >
                 <button
                   type="button"
                   disabled={!canCreate}
@@ -361,11 +504,32 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
                     </span>
                   </span>
                 </button>
+                <div className="flex items-center justify-between border-t border-line">
+                  <button
+                    type="button"
+                    aria-label={t("createOrder.less")}
+                    disabled={!canCreate || !hasPlain(item.id)}
+                    onClick={() => removeOne(item.id)}
+                    className="grid size-11 cursor-pointer place-items-center rounded-lg text-secondary hover:bg-secondary-soft disabled:cursor-not-allowed disabled:opacity-40 sm:size-8"
+                  >
+                    <Minus className="size-4" aria-hidden />
+                  </button>
+                  <span className="text-sm font-semibold tabular-nums">{countInCart(item.id)}</span>
+                  <button
+                    type="button"
+                    aria-label={t("createOrder.more")}
+                    disabled={!canCreate}
+                    onClick={() => addPlain(item)}
+                    className="grid size-11 cursor-pointer place-items-center rounded-lg text-ok hover:bg-ok-soft disabled:cursor-not-allowed disabled:opacity-40 sm:size-8"
+                  >
+                    <Plus className="size-4" aria-hidden />
+                  </button>
+                </div>
                 <button
                   type="button"
                   disabled={!canCreate}
                   onClick={() => setPicked(item)}
-                  className="cursor-pointer border-t border-line px-3 py-2 text-xs font-medium text-ink-soft hover:bg-primary-soft disabled:opacity-60"
+                  className="min-h-11 cursor-pointer border-t border-line px-3 py-2 text-xs font-medium text-ink-soft hover:bg-primary-soft disabled:opacity-60 sm:min-h-0"
                 >
                   {t("createOrder.options")}
                 </button>
@@ -376,111 +540,29 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
         {visible.length > PAGE_SIZE && <Pagination meta={tiles.meta} onPageChange={setTilePage} />}
       </section>
 
-      <aside className="lg:sticky lg:top-4 lg:col-span-4 lg:self-start">
-        <Panel title={t("createOrder.cart")}>
-          {lines.length === 0 ? (
-            <EmptyState>{t("createOrder.emptyCart")}</EmptyState>
-          ) : (
-            <ul className="divide-y divide-line">
-              {lines.map((line) => (
-                <li key={line.key} className="space-y-2 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{lineName(line)}</p>
-                      {lineDetail(line) && <p className="text-xs text-muted">{lineDetail(line)}</p>}
-                    </div>
-                    <button
-                      type="button"
-                      aria-label={t("crud.delete")}
-                      disabled={pay.isPending}
-                      onClick={() => removeLine(line.key)}
-                      className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg text-secondary hover:bg-secondary-soft"
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        aria-label={t("createOrder.less")}
-                        disabled={line.quantity <= 1 || pay.isPending}
-                        onClick={() => setQuantity(line.key, line.quantity - 1)}
-                        className="grid size-7 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40"
-                      >
-                        <Minus className="size-3.5" aria-hidden />
-                      </button>
-                      <span className="w-8 text-center text-sm font-semibold tabular-nums">{line.quantity}</span>
-                      <button
-                        type="button"
-                        aria-label={t("createOrder.more")}
-                        disabled={line.quantity >= TILL_MAX_QUANTITY || pay.isPending}
-                        onClick={() => setQuantity(line.key, line.quantity + 1)}
-                        className="grid size-7 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40"
-                      >
-                        <Plus className="size-3.5" aria-hidden />
-                      </button>
-                    </div>
-                    <span className="text-sm font-semibold tabular-nums">{formatMoney(line.unitPrice * line.quantity, line.currency)}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {lines.length > 0 && (
-            <dl className="mt-4 space-y-1 border-t border-line pt-4 text-sm">
-              <div className="flex justify-between text-ink-soft">
-                <dt>{t("createOrder.subtotal")}</dt>
-                <dd className="tabular-nums">{formatMoney(totals.subtotal, currency)}</dd>
-              </div>
-              <div className="flex justify-between text-ink-soft">
-                <dt>{t("createOrder.tax")}</dt>
-                <dd className="tabular-nums">{formatMoney(totals.tax, currency)}</dd>
-              </div>
-              <div className="flex justify-between text-base font-bold">
-                <dt>{t("createOrder.total")}</dt>
-                <dd className="tabular-nums">{formatMoney(totals.total, currency)}</dd>
-              </div>
-            </dl>
-          )}
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <Input
-              label={t("createOrder.customerName")}
-              value={customerName}
-              maxLength={100}
-              onChange={(event) => setCustomerName(event.target.value)}
-            />
-            <Input
-              label={t("createOrder.customerPhone")}
-              value={customerPhone}
-              dir="ltr"
-              inputMode="tel"
-              maxLength={20}
-              onChange={(event) => setCustomerPhone(event.target.value)}
-            />
-          </div>
-
-          <div className="mt-4 space-y-2">
-            <Button
-              disabled={!canCreate || lines.length === 0 || pay.isPending}
-              onClick={() => setConfirm("pay")}
-              className="w-full bg-primary text-ink hover:bg-primary/90"
-            >
-              {t("createOrder.pay")}
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="ghost" className="flex-1" disabled={lines.length === 0 || pay.isPending} onClick={() => setConfirm("clear")}>
-                {t("createOrder.clearCart")}
-              </Button>
-              <Button variant="danger" className="flex-1" disabled={pay.isPending} onClick={() => setConfirm("discard")}>
-                {t("createOrder.discardCart")}
-              </Button>
-            </div>
-          </div>
-        </Panel>
+      <aside className="hidden lg:sticky lg:top-4 lg:col-span-4 lg:block lg:self-start">
+        <Panel title={t("createOrder.cart")}>{cartContent}</Panel>
       </aside>
+
+      {/* على الهاتف والتابلت: الإجمالي وزر فتح السلة في شريط ثابت أسفل الشاشة. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs text-muted">{t("createOrder.total")}</p>
+            <p className="text-lg font-bold tabular-nums text-ink">{formatMoney(totals.total, currency)}</p>
+          </div>
+          <Button onClick={() => setCartOpen(true)} className="bg-primary text-ink hover:bg-primary/90">
+            <ShoppingCart className="size-4" aria-hidden />
+            {t("createOrder.openCart")}
+          </Button>
+        </div>
+      </div>
+
+      {cartOpen && (
+        <Dialog open onClose={() => setCartOpen(false)} size="md" fullOnMobile title={t("createOrder.cart")}>
+          {cartContent}
+        </Dialog>
+      )}
 
       <Dialog
         open={activeConfirm !== null}

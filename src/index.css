@@ -72,6 +72,20 @@
   margin: 3mm;
 }
 
+/* ورق 58mm لطابعة الأجهزة المحمولة (مثل الطابعة الداخلية في Sunmi). الهوامش أضيق كي يتسع السطر. */
+@page receipt58 {
+  size: 58mm auto;
+  margin: 2mm;
+}
+
+#print-area.receipt-58 .px-6 {
+  padding-inline: 0.75rem;
+}
+
+#print-area.receipt-58 .mx-6 {
+  margin-inline: 0.75rem;
+}
+
 /*
  * الطباعة تُظهر منطقة `#print-area` وحدها. النافذة التي تحملها تُعرض في تدفق الصفحة العادي،
  * لا `fixed`، فتتقسم الفاتورة الطويلة على أوراق متتالية دون أن تُقصّ أو يتكرر رأسها في كل ورقة.
@@ -158,6 +172,21 @@
   #print-area.receipt-print {
     page: receipt;
     width: 80mm;
+  }
+
+  /* إيصال 58mm: الصفحة المسماة نفسها، وتأتي بعد قواعد 80mm فتغلبها. */
+  body > :has(#print-area.receipt-58) {
+    page: receipt58;
+  }
+
+  html:has(#print-area.receipt-58),
+  body:has(#print-area.receipt-58) {
+    page: receipt58;
+  }
+
+  #print-area.receipt-58 {
+    page: receipt58;
+    width: 58mm;
   }
 }
 
@@ -307,4 +336,12 @@
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/*
+ * مساحة الأمان السفلية لأجهزة الحواف (iPhone): تُضاف إلى الحشو ولا تُلغيه، وتساوي صفراً على غيرها.
+ * تحتاج `viewport-fit=cover` في وسم viewport حتى تحمل قيمة غير صفرية.
+ */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }

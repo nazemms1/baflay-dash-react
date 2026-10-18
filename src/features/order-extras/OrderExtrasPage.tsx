@@ -53,7 +53,7 @@ export function OrderExtrasPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-ink">{t("nav.orderExtras")}</h1>
+        <h1 className="text-xl font-bold text-ink sm:text-2xl">{t("nav.orderExtras")}</h1>
         <p className="mt-1 text-sm text-muted">{t("orderExtras.subtitle")}</p>
       </header>
 

@@ -191,6 +191,7 @@ export function ItemOptionsDialog({
       open
       onClose={onClose}
       size="lg"
+      fullOnMobile
       title={item.name}
       description={formatMoney(item.price, currency)}
       footer={
@@ -236,12 +237,12 @@ export function ItemOptionsDialog({
             <h3 className="text-sm font-semibold text-ink">{t("orderBuilder.quantity")}</h3>
             <div className="flex items-center gap-2">
               <button type="button" aria-label={t("createOrder.less")} disabled={quantity <= 1} onClick={() => setQuantity(quantity - 1)}
-                className="grid size-9 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40">
+                className="grid size-11 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40 sm:size-9">
                 <Minus className="size-4" aria-hidden />
               </button>
               <span className="w-8 text-center font-semibold tabular-nums">{quantity}</span>
               <button type="button" aria-label={t("createOrder.more")} disabled={quantity >= TILL_MAX_QUANTITY} onClick={() => setQuantity(quantity + 1)}
-                className="grid size-9 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40">
+                className="grid size-11 cursor-pointer place-items-center rounded-lg ring-1 ring-line disabled:opacity-40 sm:size-9">
                 <Plus className="size-4" aria-hidden />
               </button>
             </div>
@@ -272,7 +273,7 @@ export function ItemOptionsDialog({
                   return (
                     <li key={suggestion.id}>
                       <button type="button" onClick={() => suggest(suggestion)}
-                        className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-start text-sm transition hover:border-primary hover:bg-primary-soft">
+                        className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-line px-3 py-3 text-start text-sm transition hover:border-primary hover:bg-primary-soft sm:py-2">
                         <span className="flex min-w-0 items-center gap-3">
                           <Thumb src={suggestion.image} name={suggestion.name} />
                           <span className="truncate">{suggestion.name}</span>
@@ -377,7 +378,7 @@ function OptionCard({
           type="button"
           aria-label={t("createOrder.less")}
           onClick={() => onStep(-1)}
-          className="grid size-6 cursor-pointer place-items-center text-secondary"
+          className="grid size-10 cursor-pointer place-items-center text-secondary sm:size-6"
         >
           <Minus className="size-3.5" aria-hidden />
         </button>
@@ -387,7 +388,7 @@ function OptionCard({
           aria-label={t("createOrder.more")}
           disabled={blocked}
           onClick={() => onStep(1)}
-          className="grid size-6 cursor-pointer place-items-center text-secondary disabled:cursor-not-allowed disabled:opacity-40"
+          className="grid size-10 cursor-pointer place-items-center text-secondary disabled:cursor-not-allowed disabled:opacity-40 sm:size-6"
         >
           <Plus className="size-3.5" aria-hidden />
         </button>

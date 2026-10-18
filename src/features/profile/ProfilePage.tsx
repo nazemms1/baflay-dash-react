@@ -30,7 +30,7 @@ export function ProfilePage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-ink">{t("profile.title")}</h1>
+        <h1 className="text-xl font-bold text-ink sm:text-2xl">{t("profile.title")}</h1>
         <p className="mt-1 text-sm text-muted">{t("profile.subtitle")}</p>
       </header>
 
@@ -139,8 +139,8 @@ function PersonalTab({ id }: { id: number }) {
             onChange={setPicture}
           />
         </div>
-        <div className="flex justify-end sm:col-span-2">
-          <Button type="submit" disabled={save.isPending || form.name.trim() === ""} className="bg-primary text-ink hover:bg-primary/90">
+        <div className="sm:col-span-2 sm:flex sm:justify-end">
+          <Button type="submit" disabled={save.isPending || form.name.trim() === ""} className="w-full bg-primary text-ink hover:bg-primary/90 sm:w-auto">
             {save.isPending ? t("crud.saving") : t("profile.save")}
           </Button>
         </div>
@@ -195,7 +195,7 @@ function LocationTab({ id }: { id: number }) {
           <p className="text-sm text-muted tabular-nums" dir="ltr">
             {point.lat !== null && point.lng !== null ? `${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}` : t("crud.location.notSet")}
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="secondary" disabled={point.lat === null} onClick={() => setDraft({ lat: null, lng: null })}>
               {t("crud.location.clear")}
             </Button>
@@ -285,8 +285,8 @@ function SecurityTab({ id }: { id: number }) {
           onChange={(e) => setConfirmation(e.target.value)}
           error={mismatch ? t("profile.passwordsMismatch") : null}
         />
-        <div className="flex justify-end">
-          <Button type="submit" disabled={password.length === 0 || mismatch || save.isPending} className="bg-primary text-ink hover:bg-primary/90">
+        <div className="sm:flex sm:justify-end">
+          <Button type="submit" disabled={password.length === 0 || mismatch || save.isPending} className="w-full bg-primary text-ink hover:bg-primary/90 sm:w-auto">
             {save.isPending ? t("crud.saving") : t("profile.updatePassword")}
           </Button>
         </div>

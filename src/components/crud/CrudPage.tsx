@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, Trash2, type LucideIcon } from "lucide-react";
 import { usePermissions } from "@/features/auth/hooks";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { FilterSheet, type ActiveFilter } from "@/components/ui/FilterSheet";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Pagination } from "@/components/ui/Pagination";
-import { Panel } from "@/components/ui/Panel";
+import { ResponsiveRecordList, type RecordColumn } from "@/components/ui/ResponsiveRecordList";
 import { Skeleton } from "@/components/ui/Bars";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { SelectField } from "@/components/ui/Fields";
@@ -30,6 +32,9 @@ type Active<T> =
 /**
  * صفحة CRUD كاملة لأي وحدة: قائمة مرقّمة، وإنشاء وتعديل وعرض وحذف، ولكل زر
  * صلاحيته الخاصة من الخادم. الشاشة لا تعرف أي وحدة بعينها، بل تقرأ تعريفها.
+ *
+ * على الهاتف تصير الصفوف كروتاً، والفلاتر خلف زر، وتملأ النماذج الشاشة. الأعمدة تُرسم مرة
+ * واحدة، والكرت يقرأ منها: الصورة تبقى في بدايته، والاسم عنوانه، والباقي تفاصيله.
  */
 export function CrudPage<T extends { id: number | string }>({ module }: { module: CrudModule<T> }) {
   const { t } = useTranslation();
@@ -75,25 +80,128 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
   const rows = list.data?.items ?? [];
   const close = () => setActive(null);
 
+  // أزرار الصف بمصدر واحد، وتظهر بشكلين: أيقونات في الجدول، وأزرار بنص في الكرت.
+  const actionsOf = (row: T, variant: "icon" | "button") => (
+    <>
+      {module.rowActions && <module.rowActions row={row} />}
+      {canShow && (
+        <RecordAction
+          variant={variant}
+          icon={Eye}
+          label={t("crud.show")}
+          onClick={() => setActive({ kind: "show", id: row.id })}
+        />
+      )}
+      {canEdit && (
+        <RecordAction
+          variant={variant}
+          icon={Pencil}
+          label={t("crud.edit")}
+          onClick={() => setActive({ kind: "edit", id: row.id })}
+        />
+      )}
+      {canDelete && (
+        <RecordAction
+          variant={variant}
+          icon={Trash2}
+          label={t("crud.delete")}
+          tone="danger"
+          onClick={() => setActive({ kind: "delete", row })}
+        />
+      )}
+    </>
+  );
+
+  // الجدول: الاسم والصورة والعمودان الأولان يظهران دائماً، والباقي من الشاشات الأوسع.
+  const recordColumns: RecordColumn<T>[] = [
+    ...module.columns.map((column, index) => ({
+      key: column.key,
+      header: t(column.header),
+      cell: (row: T) => column.render(row, language),
+      className: column.className,
+      from: index < 2 ? undefined : ("lg" as const),
+    })),
+    ...(hasActions
+      ? [
+          {
+            key: "actions",
+            header: t("crud.actions"),
+            align: "end" as const,
+            cell: (row: T) => <div className="flex items-center justify-end gap-1">{actionsOf(row, "icon")}</div>,
+          },
+        ]
+      : []),
+  ];
+
+  // الكرت على الهاتف: الصورة والاسم في الرأس، والباقي في شبكة صغيرة، والأزرار بعرض كامل تحتها.
+  const renderCard = (row: T) => {
+    const media = module.columns.find((column) => column.key === "image");
+    const title = module.columns.find((column) => column.key === "name") ?? module.columns.find((column) => column !== media);
+    const details = module.columns.filter((column) => column !== media && column !== title);
+
+    return (
+      <article className="flex flex-col gap-3 rounded-2xl border border-line bg-canvas/60 p-4">
+        <div className="flex min-w-0 items-center gap-3">
+          {media && <div className="shrink-0">{media.render(row, language)}</div>}
+          {title && <div className="min-w-0 flex-1">{title.render(row, language)}</div>}
+        </div>
+
+        {details.length > 0 && (
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-3 rounded-xl bg-surface p-3 text-sm">
+            {details.map((column) => (
+              <div key={column.key} className="min-w-0">
+                <dt className="text-xs text-muted">{t(column.header)}</dt>
+                <dd className="mt-0.5 min-w-0 break-words text-ink">{column.render(row, language)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {hasActions && <div className="flex flex-wrap gap-2">{actionsOf(row, "button")}</div>}
+      </article>
+    );
+  };
+
+  // فلاتر القائمة النشطة: تظهر شارات على الهاتف، ويُزال كل منها بنقرة.
+  const filterChips: ActiveFilter[] = (module.filters ?? []).flatMap((filter) => {
+    const value = filterValues[filter.key];
+    if (!value) return [];
+    const shown =
+      filter.kind === "date" ? value : (filter.options.find((option) => String(option.value) === value)?.label ?? value);
+    return [
+      {
+        key: filter.key,
+        label: `${filter.label}: ${shown}`,
+        onRemove: () => {
+          setPage(1);
+          setFilterValues((current) => ({ ...current, [filter.key]: "" }));
+        },
+      },
+    ];
+  });
+
+  const resetFilters = () => {
+    setPage(1);
+    setFilterValues({});
+  };
+
   return (
     <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">{t(module.titleKey)}</h1>
-          {list.data && (
-            <p className="mt-1 text-sm text-muted">{t("common.total", { count: list.data.meta.total })}</p>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {module.headerActions}
-          {canCreate && (
-            <Button onClick={() => setActive({ kind: "create" })} className="bg-primary text-ink hover:bg-primary/90">
-              <Plus className="size-4" aria-hidden />
-              {t("crud.add")}
-            </Button>
-          )}
-        </div>
-      </header>
+      <PageHeader
+        title={t(module.titleKey)}
+        description={list.data ? t("common.total", { count: list.data.meta.total }) : undefined}
+        actions={
+          <>
+            {module.headerActions}
+            {canCreate && (
+              <Button onClick={() => setActive({ kind: "create" })} className="bg-primary text-ink hover:bg-primary/90">
+                <Plus className="size-4" aria-hidden />
+                {t("crud.add")}
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {module.searchParam && (
         <div className="relative">
@@ -109,9 +217,9 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
       )}
 
       {module.filters && module.filters.length > 0 && (
-        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-line bg-surface p-4">
+        <FilterSheet activeFilters={filterChips} onReset={resetFilters}>
           {module.filters.map((filter) => (
-            <div key={filter.key} className="min-w-44">
+            <div key={filter.key} className="min-w-0">
               {filter.kind === "date" ? (
                 <Input
                   label={filter.label}
@@ -139,20 +247,22 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
               )}
             </div>
           ))}
-        </div>
+        </FilterSheet>
       )}
 
-      <Panel>
+      <section className="overflow-hidden rounded-2xl border border-line bg-surface">
         {list.isError && (
-          <ErrorState
-            message={list.error instanceof ApiError ? list.error.message : t("errors.unexpected")}
-            onRetry={() => void list.refetch()}
-            error={list.error}
-          />
+          <div className="p-4">
+            <ErrorState
+              message={list.error instanceof ApiError ? list.error.message : t("errors.unexpected")}
+              onRetry={() => void list.refetch()}
+              error={list.error}
+            />
+          </div>
         )}
 
         {!list.isError && list.isPending && (
-          <div className="space-y-3">
+          <div className="space-y-3 p-4">
             {Array.from({ length: 6 }, (_, index) => (
               <Skeleton key={index} className="h-12" />
             ))}
@@ -162,62 +272,24 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
         {list.isSuccess && rows.length === 0 && <EmptyState>{t("common.noData")}</EmptyState>}
 
         {list.isSuccess && rows.length > 0 && (
-          <div className="space-y-4">
-            {/* الجدول يبدأ من أعلى البطاقة ويقصّ زواياها، فيصل الهيدر الأحمر إلى الحواف كلها. */}
-            <div className="-mx-5 -mt-5 overflow-x-auto rounded-t-2xl">
-              <table className="w-full min-w-[520px] text-sm">
-                <thead className="bg-secondary text-sm font-semibold text-surface">
-                  <tr className="border-b border-line">
-                    {module.columns.map((column) => (
-                      <th key={column.key} className={`px-5 py-4 text-start font-medium ${column.className ?? ""}`}>
-                        {t(column.header)}
-                      </th>
-                    ))}
-                    {hasActions && <th className="px-5 py-4 text-end font-medium">{t("crud.actions")}</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id} className="border-b border-line/70 transition last:border-0 hover:bg-canvas/70">
-                      {module.columns.map((column) => (
-                        <td key={column.key} className={`px-5 py-3 align-middle ${column.className ?? ""}`}>
-                          {column.render(row, language)}
-                        </td>
-                      ))}
-                      {hasActions && (
-                        <td className="px-5 py-3">
-                          <div className="flex items-center justify-end gap-1">
-                            {module.rowActions && <module.rowActions row={row} />}
-                            {canShow && (
-                              <IconAction label={t("crud.show")} onClick={() => setActive({ kind: "show", id: row.id })}>
-                                <Eye className="size-4" aria-hidden />
-                              </IconAction>
-                            )}
-                            {canEdit && (
-                              <IconAction label={t("crud.edit")} onClick={() => setActive({ kind: "edit", id: row.id })}>
-                                <Pencil className="size-4" aria-hidden />
-                              </IconAction>
-                            )}
-                            {canDelete && (
-                              <IconAction label={t("crud.delete")} tone="danger" onClick={() => setActive({ kind: "delete", row })}>
-                                <Trash2 className="size-4" aria-hidden />
-                              </IconAction>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {list.data && <Pagination meta={list.data.meta} onPageChange={setPage} />}
+          <ResponsiveRecordList
+            label={t(module.titleKey)}
+            rows={rows}
+            getKey={(row) => String(row.id)}
+            columns={recordColumns}
+            renderCard={renderCard}
+          />
+        )}
+
+        {list.data && rows.length > 0 && (
+          <div className="px-4 pb-4">
+            <Pagination meta={list.data.meta} onPageChange={setPage} />
           </div>
         )}
-      </Panel>
+      </section>
 
       {active?.kind === "create" && (
-        <Dialog open onClose={close} title={t("crud.createTitle", { name: t(module.titleKey) })} size="lg">
+        <Dialog open onClose={close} title={t("crud.createTitle", { name: t(module.titleKey) })} size="lg" fullOnMobile>
           {module.form ? (
             <module.form record={null} onDone={close} />
           ) : (
@@ -232,6 +304,43 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
 
       {active?.kind === "delete" && <DeleteDialog module={module} row={active.row} onClose={close} />}
     </div>
+  );
+}
+
+/**
+ * زر الإجراء في الصف. بشكل الأيقونة في الجدول، وبشكل الزر بعرض كامل في الكرت.
+ * الأيقونة 44px على الهاتف ويصغر من `sm`.
+ */
+function RecordAction({
+  variant,
+  icon: Icon,
+  label,
+  tone = "default",
+  onClick,
+}: {
+  variant: "icon" | "button";
+  icon: LucideIcon;
+  label: string;
+  tone?: "default" | "danger";
+  onClick: () => void;
+}) {
+  if (variant === "button") {
+    return (
+      <Button
+        variant="secondary"
+        className={tone === "danger" ? "flex-1 text-secondary" : "flex-1"}
+        onClick={onClick}
+      >
+        <Icon className="size-4" aria-hidden />
+        {label}
+      </Button>
+    );
+  }
+
+  return (
+    <IconAction label={label} tone={tone} onClick={onClick}>
+      <Icon className="size-4" aria-hidden />
+    </IconAction>
   );
 }
 
@@ -254,8 +363,8 @@ function IconAction({
       onClick={onClick}
       className={
         tone === "danger"
-          ? "grid size-8 cursor-pointer place-items-center rounded-lg text-ink-soft transition hover:bg-secondary-soft hover:text-secondary"
-          : "grid size-8 cursor-pointer place-items-center rounded-lg text-ink-soft transition hover:bg-primary-soft hover:text-ink"
+          ? "grid size-11 cursor-pointer place-items-center rounded-lg text-ink-soft transition hover:bg-secondary-soft hover:text-secondary sm:size-8"
+          : "grid size-11 cursor-pointer place-items-center rounded-lg text-ink-soft transition hover:bg-primary-soft hover:text-ink sm:size-8"
       }
     >
       {children}
@@ -287,7 +396,7 @@ function RecordDialog<T extends { id: number | string }>({
     mode === "edit" ? t("crud.editTitle") : recordName || t("crud.showTitle");
 
   return (
-    <Dialog open onClose={onClose} title={title} size="lg">
+    <Dialog open onClose={onClose} title={title} size="lg" fullOnMobile={mode === "edit"}>
       {detail.isPending && <Skeleton className="h-64" />}
       {detail.isError && (
         <ErrorState

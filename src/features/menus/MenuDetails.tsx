@@ -128,7 +128,7 @@ export function MenuDetails({ record }: { record: Named }) {
                   setActive(tab.id);
                   setPage(1);
                 }}
-                className={`shrink-0 cursor-pointer rounded-full px-4 py-2 text-sm font-medium transition ${
+                className={`shrink-0 cursor-pointer rounded-full px-4 py-2.5 text-sm font-medium transition sm:py-2 ${
                   on ? "bg-primary text-ink" : "ring-1 ring-line hover:bg-primary-soft"
                 }`}
               >
@@ -202,7 +202,7 @@ function AvailabilitySwitch({
       aria-label={label}
       disabled={disabled}
       onClick={onToggle}
-      className={`relative h-5 w-9 shrink-0 cursor-pointer rounded-full transition disabled:opacity-50 ${on ? "bg-ok" : "bg-line"}`}
+      className={`relative h-6 w-11 shrink-0 cursor-pointer rounded-full transition disabled:opacity-50 sm:h-5 sm:w-9 ${on ? "bg-ok" : "bg-line"}`}
     >
       <span className={`absolute top-0.5 size-4 rounded-full bg-surface shadow transition ${on ? "end-0.5" : "start-0.5"}`} />
     </button>

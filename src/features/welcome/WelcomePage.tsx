@@ -20,7 +20,7 @@ export function WelcomePage() {
 
   return (
     <div className="flex min-h-[70vh] items-center justify-center p-4">
-      <section className="w-full max-w-md space-y-5 rounded-3xl border border-line bg-surface p-8 text-center shadow-sm sm:p-10">
+      <section className="w-full max-w-md space-y-5 rounded-3xl border border-line bg-surface p-6 text-center shadow-sm sm:p-10">
         <img src="/logo.png" alt="" className="mx-auto h-14 w-auto" />
         <p className="text-xs tracking-wide text-muted">{t("app.name")}</p>
 

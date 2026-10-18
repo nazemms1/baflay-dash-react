@@ -60,7 +60,7 @@ export function DuplicateMenuAction({ row }: { row: Named }) {
         onClick={() => setOpen(true)}
         aria-label={t("menuDuplicate.open")}
         title={t("menuDuplicate.open")}
-        className="grid size-8 cursor-pointer place-items-center rounded-lg text-muted transition hover:bg-primary-soft hover:text-ink"
+        className="grid size-11 cursor-pointer place-items-center rounded-lg text-muted transition hover:bg-primary-soft hover:text-ink sm:size-8"
       >
         <Copy className="size-4" aria-hidden />
       </button>
@@ -151,6 +151,7 @@ function DuplicateDialog({ source, onClose }: { source: Named; onClose: () => vo
       open
       onClose={onClose}
       size="lg"
+      fullOnMobile
       title={t("menuDuplicate.title", { name: sourceName })}
       description={t("menuDuplicate.description")}
       footer={
@@ -187,9 +188,9 @@ function DuplicateDialog({ source, onClose }: { source: Named; onClose: () => vo
           </div>
 
           <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-sm font-semibold text-ink">{t("menuDuplicate.items", { count: form.rows.length })}</h3>
-              <div className="w-64">
+              <div className="w-full sm:w-64">
                 <RemoteSelect
                   label={t("menuDuplicate.addItem")}
                   source={ITEM_OPTIONS}
@@ -226,7 +227,7 @@ function DuplicateDialog({ source, onClose }: { source: Named; onClose: () => vo
                         type="button"
                         aria-label={t("crud.removeRow")}
                         onClick={() => setForm({ rows: form.rows.filter((_, position) => position !== index) })}
-                        className="grid size-9 cursor-pointer place-items-center rounded-lg text-secondary hover:bg-secondary-soft"
+                        className="grid size-11 cursor-pointer place-items-center rounded-lg text-secondary hover:bg-secondary-soft sm:size-9"
                       >
                         <Trash2 className="size-4" aria-hidden />
                       </button>
