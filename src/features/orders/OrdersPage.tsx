@@ -26,8 +26,9 @@ import { ORDER_STATUSES } from "./orderStatus";
 import { AssignDriverDialog } from "./AssignDriverDialog";
 import { useNewOrderAlert } from "./newOrderAlert";
 import { OrderCard } from "./OrderCard";
-import { DriverCell, RatingStars, StatusTrigger, TypeChip } from "./OrderRowParts";
+import { AwaitingBadge, DriverCell, RatingStars, StatusTrigger, TypeChip } from "./OrderRowParts";
 import { branchOf, customerOf, refOf, typeOf, type OrderType } from "./orderRows";
+import { isAwaitingAcceptance } from "./acceptance";
 
 // الفروع تُبحث في الخادم عشرين في الصفحة، كما في قائمة الفرع عند إنشاء الطلب.
 const BRANCH_FILTER = remoteSource("branches", branches);
@@ -70,7 +71,8 @@ export function OrdersPage() {
   const canAssign = permissions.has(ADMIN_DRIVER_PERMISSIONS.assign);
   // تنبيه الطلبات الجديدة: الاستعلام الدوري يعمل مع الصفحة، والصوت اختياري.
   // "عرض الأحدث" في التنبيه يعيد القائمة إلى الصفحة الأولى، حيث تظهر الطلبات الجديدة.
-  const alert = useNewOrderAlert(canList, () => setPage(1));
+  // الصوت يرن للطلبات المنتظرة للقبول لمن يستطيع قبولها (تغيير الحالة) فقط.
+  const alert = useNewOrderAlert(canList, () => setPage(1), canChangeStatus);
   // المستخدم المرتبط بفرع يرى فرعه فقط، والخادم يفرض ذلك أيضاً.
   const branchId = scope.isBranchScoped ? scope.branchId : branchFilter;
 
@@ -205,18 +207,22 @@ export function OrdersPage() {
     {
       key: "number",
       header: t("orders.table.number"),
-      cell: (row) =>
-        canView ? (
-          <button
-            type="button"
-            onClick={() => setViewing(row)}
-            className="cursor-pointer font-mono font-semibold text-ink hover:text-secondary"
-          >
-            {refOf(row)}
-          </button>
-        ) : (
-          <span className="font-mono font-semibold text-ink">{refOf(row)}</span>
-        ),
+      cell: (row) => (
+        <div className="space-y-1.5">
+          {canView ? (
+            <button
+              type="button"
+              onClick={() => setViewing(row)}
+              className="cursor-pointer font-mono font-semibold text-ink hover:text-secondary"
+            >
+              {refOf(row)}
+            </button>
+          ) : (
+            <span className="font-mono font-semibold text-ink">{refOf(row)}</span>
+          )}
+          {isAwaitingAcceptance(toText(row.status)) && <AwaitingBadge />}
+        </div>
+      ),
     },
     {
       key: "created",
@@ -429,6 +435,7 @@ export function OrdersPage() {
                 canView={canView}
                 canAssign={canAssign}
                 canChangeStatus={canChangeStatus}
+                awaiting={isAwaitingAcceptance(toText(row.status))}
                 onView={() => setViewing(row)}
                 onAssign={() => setAssigning(row)}
                 onChangeStatus={() => setPicking(row)}

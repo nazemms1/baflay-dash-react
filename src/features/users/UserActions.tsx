@@ -36,18 +36,36 @@ const ROLE_OPTIONS: RemoteSource = {
   },
 };
 
+/** دور من حساب، بمعرّفه للحفظ واسمه الظاهر للعرض. */
+interface RoleOption {
+  value: number;
+  label: string;
+}
+
 /**
- * معرّف الدور من استجابة الحساب. إن جاء الدور كائناً فيه `id` نأخذه، وإن جاء اسماً نبحث عن
- * الدور بهذا الاسم لنحصل على معرّفه.
+ * قائمة الأدوار من استجابة `users/{id}/access`. الاستجابة قد تكون قائمة مباشرة، أو كائناً فيه
+ * `roles`. لا نمرّرها بـ`asRecord` أولاً، فهي تحوّل القائمة إلى كائن فارغ.
  */
-async function roleIdOf(entry: unknown, signal?: AbortSignal): Promise<number | null> {
+function accessEntries(body: unknown): unknown[] {
+  return Array.isArray(body) ? body : asArray(asRecord(body).roles);
+}
+
+/**
+ * دور واحد من الاستجابة. إن جاء كائناً فيه `id` نأخذه مع اسمه، وإن جاء اسماً نبحث عن الدور بهذا
+ * الاسم. ما لم نجد له معرّفاً نُرجع اسمه وحده، فيظهر للمشغّل ولا يُختار بالخطأ.
+ */
+async function resolveRole(entry: unknown, signal?: AbortSignal): Promise<RoleOption | string | null> {
   const record = asRecord(entry);
-  if (record.id !== undefined && record.id !== null) return Number(record.id);
+  if (record.id !== undefined && record.id !== null) {
+    const label = toText(record.label) || toText(record.name) || String(record.id);
+    return { value: Number(record.id), label };
+  }
   const name = typeof entry === "string" ? entry : toText(record.name);
   if (!name) return null;
   const found = await roles.list({ page: 1, per_page: 20, search: name }, signal);
   const match = found.items.find((role) => toText(role.name) === name);
-  return match ? Number(match.id) : null;
+  if (!match) return name;
+  return { value: Number(match.id), label: toText(match.label) || toText(match.name) };
 }
 
 /** أزرار الصف: للحساب النشط الأدوار، وللحساب المحذوف الاستعادة والحذف النهائي. */
@@ -100,18 +118,23 @@ function AccessDialog({
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<number[] | null>(null);
 
+  // أدوار الحساب الحالية بأسمائها ومعرّفاتها، وما لم يُعرف معرّفه يبقى اسماً للعرض فقط.
   const current = useQuery({
     queryKey: ["user-access", userId],
     queryFn: async ({ signal }) => {
-      const body = asRecord(await users.getAccess(userId));
-      const list = Array.isArray(body) ? (body as unknown[]) : asArray(body.roles);
-      const ids = await Promise.all(list.map((entry) => roleIdOf(entry, signal)));
-      return ids.filter((id): id is number => id !== null);
+      const entries = accessEntries(await users.getAccess(userId));
+      const resolved = await Promise.all(entries.map((entry) => resolveRole(entry, signal)));
+      const matched = resolved.filter((role): role is RoleOption => typeof role === "object" && role !== null);
+      const unresolved = resolved.filter((role): role is string => typeof role === "string");
+      return { roles: matched, unresolved };
     },
   });
 
+  const currentRoles = current.data?.roles ?? [];
+  const currentNames = [...currentRoles.map((role) => role.label), ...(current.data?.unresolved ?? [])];
+
   // الأدوار المختارة معرّفاتها، والخادم يستقبلها أعداداً.
-  const selected = draft ?? current.data ?? [];
+  const selected = draft ?? currentRoles.map((role) => role.value);
 
   const save = useMutation({
     mutationFn: () => users.setAccess(userId, { roles: selected }),
@@ -153,10 +176,16 @@ function AccessDialog({
       )}
       {current.isSuccess && (
         <div className="space-y-3">
+          <p className="rounded-xl bg-canvas px-4 py-3 text-sm font-medium text-ink">
+            {currentNames.length > 0
+              ? t("access.currentRoles", { roles: currentNames.join("، ") })
+              : t("access.noRoles")}
+          </p>
           {!canEdit && <p className="text-sm text-muted">{t("access.viewOnly")}</p>}
           <RemoteCheckList
             source={ROLE_OPTIONS}
             selected={selected}
+            known={currentRoles}
             onChange={(next) => setDraft(next.map(Number))}
             readOnly={!canEdit}
           />

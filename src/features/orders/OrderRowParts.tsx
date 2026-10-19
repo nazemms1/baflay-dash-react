@@ -10,6 +10,22 @@ import { isFinalOrder, serverLabelOf } from "./orderStatus";
 import { statusDotClass } from "./statusTone";
 import type { OrderType } from "./orderRows";
 
+/**
+ * علامة الطلب المنتظر للقبول: نقطة نابضة وتسمية. تبقى حتى تتغير حالة الطلب، فيختفي الصوت وعلامته معاً.
+ */
+export function AwaitingBadge() {
+  const { t } = useTranslation();
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-semibold text-danger">
+      <span className="relative flex size-2" aria-hidden>
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-danger opacity-75" />
+        <span className="relative inline-flex size-2 rounded-full bg-danger" />
+      </span>
+      {t("ordersPage.awaitingBadge")}
+    </span>
+  );
+}
+
 /** نوع الطلب شارة ملونة: توصيل بلون الهوية، واستلام بلون ثانوي. */
 export function TypeChip({ type }: { type: OrderType }) {
   const { t } = useTranslation();

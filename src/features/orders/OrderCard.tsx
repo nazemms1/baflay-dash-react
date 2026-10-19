@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
+import clsx from "clsx";
 import { Eye, Phone } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { currentLanguage } from "@/i18n";
 import { toNumber, toText } from "@/lib/coerce";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import type { Named } from "@/services";
-import { DriverCell, RatingStars, StatusTrigger, TypeChip } from "./OrderRowParts";
+import { AwaitingBadge, DriverCell, RatingStars, StatusTrigger, TypeChip } from "./OrderRowParts";
 import { branchOf, customerOf, refOf, typeOf } from "./orderRows";
 
 interface OrderCardProps {
@@ -13,6 +14,8 @@ interface OrderCardProps {
   canView: boolean;
   canAssign: boolean;
   canChangeStatus: boolean;
+  /** الطلب ينتظر القبول: يُبرز الكرت حتى تتغير حالته. */
+  awaiting: boolean;
   onView: () => void;
   onAssign: () => void;
   onChangeStatus: () => void;
@@ -28,6 +31,7 @@ export function OrderCard({
   canView,
   canAssign,
   canChangeStatus,
+  awaiting,
   onView,
   onAssign,
   onChangeStatus,
@@ -37,7 +41,12 @@ export function OrderCard({
   const customer = customerOf(row);
 
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-line bg-canvas/60 p-4">
+    <article
+      className={clsx(
+        "flex flex-col gap-3 rounded-2xl border bg-canvas/60 p-4",
+        awaiting ? "border-danger ring-2 ring-danger/30" : "border-line"
+      )}
+    >
       <header className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {canView ? (
@@ -52,6 +61,7 @@ export function OrderCard({
             <p className="font-mono text-lg font-bold text-ink">{refOf(row)}</p>
           )}
           <p className="mt-0.5 text-xs tabular-nums text-muted">{formatDateTime(toText(row.created_at) || null)}</p>
+          {awaiting && <div className="mt-2"><AwaitingBadge /></div>}
         </div>
         <TypeChip type={typeOf(row)} />
       </header>

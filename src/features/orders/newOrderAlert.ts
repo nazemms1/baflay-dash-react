@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toNumber } from "@/lib/coerce";
+import { toNumber, toText } from "@/lib/coerce";
 import { orderAdmin } from "@/services";
+import { AWAITING_ACCEPTANCE_STATUS, REPEAT_CHIME_MS, isAwaitingAcceptance, shouldRing } from "./acceptance";
 import { countArrivals } from "./orderArrivals";
-import { playNewOrderChime } from "./orderSound";
+import { playNewOrderChime, unlockAudio } from "./orderSound";
 import { showNewOrdersToast } from "./showNewOrdersToast";
 
 const STORAGE_KEY = "orders.newOrderSound";
 const POLL_INTERVAL_MS = 25_000;
+// الطلبات المنتظرة للقبول تُجلب كل 10 ثوانٍ، فيتوقف الصوت قريباً بعد قبولها من أي جهاز.
+const AWAITING_POLL_MS = 10_000;
 
 function readStoredPreference(): boolean {
   try {
@@ -26,12 +29,15 @@ function storePreference(value: boolean): void {
 }
 
 /**
- * تنبيه الطلبات الجديدة بالاستعلام الدوري. أحدث 20 طلباً تُجلب كل 25 ثانية، ويُعد الطلب جديداً إن
- * ظهر برقم أكبر من كل ما رأيناه. هذا الاستعلام لا يتأثر بفلاتر الصفحة، فتغيير الفلتر لا يُطلق تنبيهاً كاذباً.
- * الطلبات الموجودة عند فتح الصفحة لا تُعلن، والقياس يبدأ من أول جلب من الخادم بعد الفتح،
- * فالبيانات المخزّنة من زيارة سابقة لا تدخل فيه.
+ * تنبيه الطلبات الجديدة وصوت الطلبات المنتظرة للقبول.
+ *
+ * - وصول طلب جديد (رقم أكبر من كل ما رأيناه) يُعلن برسالة. الطلبات الموجودة عند فتح الصفحة لا تُعلن كوصول.
+ * - الصوت يرن ما دام طلب بحالة «مُرسل» ينتظر القبول، ويتوقف حين تتغير حالته. قبوله من الصفحة يُحدّث القائمة فوراً،
+ *   ومن جهاز آخر يتوقف بعد الجلب التالي. الصوت لا يرن إلا إن كان مفعّلاً، ولمن يملك صلاحية تغيير الحالة فقط.
+ *
+ * هذه الاستعلامات لا تتأثر بفلاتر الصفحة، فتغيير الفلتر لا يُطلق تنبيهاً كاذباً.
  */
-export function useNewOrderAlert(enabled: boolean, onView?: () => void) {
+export function useNewOrderAlert(enabled: boolean, onView?: () => void, acceptsOrders = false) {
   const queryClient = useQueryClient();
   const [soundOn, setSoundOn] = useState(readStoredPreference);
   const baseline = useRef<number | null>(null);
@@ -57,6 +63,18 @@ export function useNewOrderAlert(enabled: boolean, onView?: () => void) {
   const fetchedHere = latest.dataUpdatedAt !== cachedAt;
   const data = latest.data;
 
+  // الطلبات المنتظرة للقبول بحالتها من الخادم، لا من أحدث 20 طلباً، فلا يفوت الصوت طلباً قديماً ما زال ينتظر.
+  const awaiting = useQuery({
+    queryKey: ["orders", "awaiting-acceptance"],
+    enabled: enabled && acceptsOrders,
+    refetchOnMount: "always",
+    refetchInterval: AWAITING_POLL_MS,
+    refetchIntervalInBackground: false,
+    queryFn: ({ signal }) =>
+      orderAdmin.list({ status: AWAITING_ACCEPTANCE_STATUS, page: 1, perPage: 50 }, signal),
+  });
+  const awaitingCount = (awaiting.data?.items ?? []).filter((row) => isAwaitingAcceptance(toText(row.status))).length;
+
   useEffect(() => {
     if (!data || !fetchedHere) return;
     const { arrived, next } = countArrivals(
@@ -66,11 +84,28 @@ export function useNewOrderAlert(enabled: boolean, onView?: () => void) {
     baseline.current = next;
     if (arrived === 0) return;
 
-    if (soundOn) playNewOrderChime();
+    // الصوت لا يُشغَّل هنا: الطلب الجديد ينتظر القبول، ونغمة الانتظار تبدأ من الاستعلام الخاص به.
     showNewOrdersToast(arrived, () => onViewRef.current?.());
     // قائمة الصفحة تُحدَّث لتظهر الطلبات الجديدة، بفلاترها الحالية.
     void queryClient.invalidateQueries({ queryKey: ["orders", "admin"] });
-  }, [data, fetchedHere, soundOn, queryClient]);
+    void queryClient.invalidateQueries({ queryKey: ["orders", "awaiting-acceptance"] });
+  }, [data, fetchedHere, queryClient]);
+
+  // نغمة تبدأ فوراً ثم تتكرر ما دام الصوت يرن، وتتوقف بتوقفه: حين لا ينتظر أحد أو يُطفأ الصوت.
+  const ringing = shouldRing(soundOn, awaitingCount);
+  useEffect(() => {
+    if (!ringing) return;
+    playNewOrderChime();
+    const timer = window.setInterval(playNewOrderChime, REPEAT_CHIME_MS);
+    return () => window.clearInterval(timer);
+  }, [ringing]);
+
+  // المتصفح يعلّق الصوت حتى نقرة في الصفحة، فأول نقرة بعد التحميل تفكّ التعليق للنغمات القادمة.
+  useEffect(() => {
+    if (!soundOn) return;
+    window.addEventListener("pointerdown", unlockAudio, { once: true });
+    return () => window.removeEventListener("pointerdown", unlockAudio);
+  }, [soundOn]);
 
   const toggleSound = useCallback(() => {
     const next = !soundOn;

@@ -624,6 +624,8 @@
     "title": "Access: {{name}}",
     "description": "The roles this account holds. Roles you do not select are removed.",
     "saved": "Access saved",
+    "currentRoles": "Current role: {{roles}}",
+    "noRoles": "This account has no role.",
     "viewOnly": "View only: you can't change this user's roles."
   },
   "users": {
@@ -773,6 +775,7 @@
   },
   "ordersPage": {
     "noAccess": "You don't have permission to view orders.",
+    "awaitingBadge": "Awaiting acceptance",
     "count": "{{count}} orders",
     "statusFilter": "Status",
     "typeFilter": "Order type",
