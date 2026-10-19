@@ -1,7 +1,7 @@
 import { api } from "@/lib/http/client";
-import { unwrapData } from "@/lib/http/envelope";
+import { toPage, unwrapData } from "@/lib/http/envelope";
 import type { Named } from "./catalog";
-import { createResource, type Id } from "./resource";
+import { createResource, type Id, type ListParams } from "./resource";
 
 // ── المستخدمون والأدوار والصلاحيات ───────────────────────────────────────
 /** حساب سابق يطابق بريداً أو هاتفاً أُطلِق من هذا الحساب، كما يعيده الخادم مع `users/{id}`. */
@@ -47,11 +47,14 @@ export const users = {
 export const roles = createResource<Named>("roles");
 
 export const permissionCatalog = {
-  /** كل الصلاحيات المعروفة لتعرضها شاشة الدور للاختيار منها. */
-  list: (params: { page: number; per_page: number }, signal?: AbortSignal) =>
+  /**
+   * كل الصلاحيات المعروفة لتعرضها شاشة الدور للاختيار منها. الاستجابة صفحة لارافل: الصفوف في `data`
+   * والترقيم (`last_page` و`total`) في جذرها، فتُقرأ كصفحة كاملة، لأن فكّ `data` وحدها يُسقط الترقيم.
+   */
+  list: (params: ListParams = {}, signal?: AbortSignal) =>
     api
       .get("permissions", { params, signal })
-      .then((response) => unwrapData<unknown>(response.data)),
+      .then((response) => toPage<Named>(response.data)),
 };
 
 // ── العملاء: إنشاء الزبون عند الاستبيان ─────────────────────────────────

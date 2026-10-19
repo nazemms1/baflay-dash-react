@@ -1,8 +1,7 @@
 import type { TFunction } from "i18next";
 import type { CrudModule, OptionSource } from "@/components/crud/types";
 import { DRIVER_ROLE } from "@/features/drivers/permissions";
-import { toPage } from "@/lib/http/envelope";
-import { branches, contactUs, permissionCatalog, roles, users, type Named } from "@/services";
+import { branches, contactUs, listAll, permissionCatalog, roles, users, type Named } from "@/services";
 import { UserRowActions } from "@/features/users/UserActions";
 import { UserDetails } from "@/features/people/UserDetails";
 import { BranchName } from "@/features/people/BranchName";
@@ -130,14 +129,9 @@ export const usersModule = (t: TFunction, scoped = false): CrudModule<Named> => 
 const permissionOptions = (t: TFunction): OptionSource => ({
   // مفتاح تخزين جديد: القائمة القديمة كانت تحمل معرّفات، فلا تُستعمل من الذاكرة المؤقتة.
   cacheKey: "permission-names",
-  load: async () => {
-    // الصلاحيات تُجلب صفحةً صفحةً (الخادم يحدّ عدد الصفوف في الطلب الواحد).
-    const rows: Named[] = [];
-    for (let page = 1; page <= 50; page += 1) {
-      const result = toPage<Named>(await permissionCatalog.list({ page, per_page: 100 }));
-      rows.push(...result.items);
-      if (result.items.length === 0 || page >= result.meta.lastPage) break;
-    }
+  load: async (signal) => {
+    // الصلاحيات كلها: الخادم يحدّ عدد الصفوف في الصفحة، فتُتبع الصفحات حتى `last_page`.
+    const rows = await listAll<Named>(permissionCatalog.list, signal);
     return rows.map((row) => {
       const record = row as Record<string, unknown>;
       const name = String(record.name ?? "");
