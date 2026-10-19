@@ -34,6 +34,16 @@ export const branchApi = {
     api
       .put(`branches/${branchId}/delivery-availability`, { is_accepting_delivery: isAcceptingDelivery })
       .then((response) => response.data as unknown),
+
+  /** الاستلام من الفرع. إيقافه مع إيقاف التوصيل معاً مرفوض (`last_order_type`). */
+  setPickupAvailability: (branchId: Id, isAcceptingPickup: boolean) =>
+    api
+      .put(`branches/${branchId}/pickup-availability`, { is_accepting_pickup: isAcceptingPickup })
+      .then((response) => response.data as unknown),
+
+  /** جدول الدوام الأسبوعي. الأيام السبعة كلها في الجسم، و`opening_hours: null` يلغي الجدول. */
+  setOpeningHours: (branchId: Id, body: Record<string, unknown>) =>
+    api.put(`branches/${branchId}/opening-hours`, body).then((response) => response.data as unknown),
 };
 
 // ── الأصناف: الإضافات التي يقبلها الصنف ─────────────────────────────────

@@ -8,6 +8,7 @@ const REFUSAL_KEYS: Record<string, string> = {
   order_in_progress: "orderRefusal.orderInProgress",
   cart_open_at_another_branch: "orderRefusal.cartAtAnotherBranch",
   delivery_paused: "orderRefusal.deliveryPaused",
+  pickup_paused: "orderRefusal.pickupPaused",
   branch_closed: "orderRefusal.branchClosed",
   extra_not_offered: "orderRefusal.extraNotOffered",
 };

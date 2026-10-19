@@ -5,8 +5,8 @@ import { ItemAddonsAction } from "@/features/items/ItemAddonsAction";
 import { MenuDetails } from "@/features/menus/MenuDetails";
 import { MenuRowActions } from "@/features/menus/MenuRowActions";
 import { CityForm } from "@/features/geography/CityForm";
-import { DeliveryPreview } from "@/features/branches/DeliveryPreview";
 import { BranchRowActions } from "@/features/branches/BranchRowActions";
+import { BranchStatusBadge } from "@/features/branches/BranchStatusBadge";
 import { localizedRecord } from "@/lib/localized";
 import { branches, categories, cities, countries, ingredients, items, menus, states, type GeoEntity, type Named } from "@/services";
 import { flagColumn, imageColumn, nameColumn, relationName, remoteSource, textColumn } from "./shared";
@@ -148,8 +148,6 @@ export const branchesModule = (t: TFunction): CrudModule<Named> => {
     { kind: "number", key: "delivery_price_per_km", label: t("crud.field.deliveryPricePerKm"), group: t("crud.group.delivery"), min: 0, max: 1000000 },
     { kind: "number", key: "delivery_minutes_min", label: t("crud.field.deliveryMinMinutes"), group: t("crud.group.delivery"), min: 0 },
     { kind: "number", key: "delivery_minutes_max", label: t("crud.field.deliveryMaxMinutes"), group: t("crud.group.delivery"), min: 0, notBelow: "delivery_minutes_min" },
-    // معاينة الرسوم تُحسب من القيم أعلاه كما يحسبها الخادم، ولا تُرسل شيئاً.
-    { kind: "custom", key: "delivery_preview", label: "", component: DeliveryPreview, group: t("crud.group.delivery") },
     { kind: "switch", key: "is_visible", label: t("crud.field.isVisible"), defaultValue: true, requires: "branches.availability.update", group: t("crud.group.status") },
     // الإغلاق المؤقت تديره مواعيد العمل، والخادم يتجاهل تعديله، فيُعرض فقط.
     { kind: "switch", key: "is_accepting_orders", label: t("crud.field.isAcceptingOrders"), readOnly: true, group: t("crud.group.status") },
@@ -176,6 +174,8 @@ export const branchesModule = (t: TFunction): CrudModule<Named> => {
       flagColumn<Named>("is_visible", t("crud.field.isVisible"), { on: t("crud.visible"), off: t("crud.hidden") }),
       flagColumn<Named>("is_accepting_orders", t("crud.field.isAcceptingOrders"), { on: t("crud.open"), off: t("crud.closed") }),
       flagColumn<Named>("is_accepting_delivery", t("crud.field.isAcceptingDelivery"), { on: t("crud.deliveryOn"), off: t("crud.deliveryOff") }),
+      flagColumn<Named>("is_accepting_pickup", t("orderTypes.pickupField"), { on: t("orderTypes.pickupOn"), off: t("orderTypes.pickupOff") }),
+      { key: "status_now", header: t("branchStatus.column"), render: (row) => <BranchStatusBadge row={row} /> },
     ],
     rowActions: BranchRowActions,
     permissions: {

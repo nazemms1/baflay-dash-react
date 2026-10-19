@@ -465,7 +465,7 @@
     "noItems": "No items at this branch.",
     "cart": "Cart",
     "openCart": "View cart",
-    "emptyCart":"The cart is empty. Tap an item to add it.",
+    "emptyCart": "The cart is empty. Tap an item to add it.",
     "customBurgerName": "Custom burger: {{list}}",
     "subtotal": "Subtotal",
     "tax": "Tax (10%)",
@@ -835,15 +835,6 @@
     "failed": "Could not open or crop the image. Choose another file.",
     "failedRemote": "This image can't be cropped because the image server doesn't let this site read it. The server must allow reading the image path."
   },
-  "deliveryPreview": {
-    "title": "Delivery fee preview",
-    "distance": "Distance (km)",
-    "fee": "Fee",
-    "fixed": "Fixed fee: {{fee}}",
-    "breakdown": "{{base}} + {{km}} km × {{perKm}} = {{total}}",
-    "needsPin": "Set the branch location on the map to calculate delivery by distance.",
-    "outOfRange": "Outside the delivery range ({{radius}} km)."
-  },
   "cities": {
     "addState": "Add state"
   },
@@ -935,6 +926,49 @@
   "deliveryToggle": {
     "saved": "Delivery availability saved"
   },
+  "orderTypes": {
+    "pickupField": "Pickup at branch",
+    "pickupOn": "Pickup",
+    "pickupOff": "Delivery only",
+    "pickupSaved": "Pickup availability saved",
+    "keepOne": "At least one order type must stay open. To stop everything, close the branch.",
+    "lastType": "This is the last order type still open. To stop everything, close the branch."
+  },
+  "branchStatus": {
+    "column": "Status now",
+    "open": "Open",
+    "closedByBranch": "Closed by branch",
+    "outsideHours": "Outside opening hours",
+    "opensAt": "Opens at {{time}}",
+    "hidden": "Hidden"
+  },
+  "openingHours": {
+    "open": "Hours and holidays",
+    "title": "Hours for {{name}}",
+    "hint": "The branch is open every day by default. Set the hours for each open day (up to three periods), and tick Day off for a closed day. Nothing is saved until you press Save.",
+    "from": "From",
+    "to": "To",
+    "addPeriod": "Add period",
+    "removePeriod": "Remove period",
+    "holiday": "Day off",
+    "closedToday": "The branch is closed this day",
+    "invalidTime": "Use HH:MM in 24-hour format",
+    "sameTime": "Opening and closing times cannot be the same",
+    "clearHolidays": "Clear days off",
+    "allHoliday": "All days cannot be days off.",
+    "alwaysOpen": "Open every day, all day, with no days off.",
+    "timezone": "Time zone",
+    "saved": "Hours and days off saved",
+    "days": {
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday"
+    }
+  },
   "itemAvailability": {
     "toggle": "Item availability in this menu",
     "unavailable": "Unavailable",
@@ -945,6 +979,7 @@
     "orderInProgress": "An order is still open{{order}} at another branch. Finish it first.",
     "cartAtAnotherBranch": "A cart is still open{{order}} at another branch.",
     "deliveryPaused": "This branch is not accepting delivery right now.",
+    "pickupPaused": "This branch is not accepting pickup right now.",
     "branchClosed": "This branch is closed right now.",
     "extraNotOffered": "Some extras are no longer offered at this branch. Choose them again, or reload the page."
   },
