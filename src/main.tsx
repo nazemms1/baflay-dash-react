@@ -6,6 +6,12 @@ import { isConfigMissing } from "@/config/env";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ConfigErrorScreen } from "@/components/ErrorScreen";
 import App from "@/app/App";
+import { initInstallPrompt } from "@/features/pwa/install";
+import { registerServiceWorker } from "@/features/pwa/serviceWorker";
+
+// التثبيت كتطبيق على الهاتف: يُهيّأ قبل الرسم حتى لا يفوتنا حدث التثبيت الذي يصل مرة واحدة.
+initInstallPrompt();
+registerServiceWorker();
 
 const container = document.getElementById("root");
 if (!container) {

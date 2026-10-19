@@ -92,6 +92,22 @@
     "branch": "Branch: {{name}}",
     "buildDate": "Build date: {{date}}"
   },
+  "pwa": {
+    "install": "Install app",
+    "installHint": "Add it to your home screen",
+    "installed": "App installed. You'll find it on your home screen.",
+    "iosTitle": "Install the Baflay dashboard",
+    "iosIntro": "iPhone has no install button. Add it from the Share menu:",
+    "iosStep1": "Tap the Share button in the browser bar.",
+    "iosStep2": "Choose “Add to Home Screen”.",
+    "iosStep3": "Tap “Add”. The Baflay icon appears on your home screen.",
+    "iosLoginNote": "Sign in again the first time you open the app. The installed app doesn't share Safari's session.",
+    "iosDone": "Got it",
+    "updateTitle": "A new version is available",
+    "updateHint": "Update now to get the latest changes.",
+    "updateNow": "Update",
+    "updateDismiss": "Dismiss"
+  },
   "notFound": {
     "title": "Page not found",
     "back": "Back to overview"
@@ -412,7 +428,24 @@
       "options": "Options",
       "option": "Option",
       "addOption": "Add option",
-      "removeQuestion": "Remove question"
+      "removeQuestion": "Remove question",
+      "share": {
+        "title": "Public link",
+        "isPublic": "Anyone with the link can answer",
+        "isPublicHint": "When this is off, the link shows \"Survey not found\" on the website.",
+        "offNote": "The link is off. Turn it on before you print the QR code.",
+        "slug": "Link name",
+        "slugHint": "Lowercase letters, digits and dashes. Up to 80 characters.",
+        "slugWarning": "Changing the link name breaks QR codes already printed.",
+        "closesAt": "Closes at (optional)",
+        "closesAtHint": "Local time, saved as UTC. Leave empty for no end date.",
+        "closesAtColumn": "Closes at",
+        "closed": "Closed",
+        "link": "Link",
+        "copy": "Copy link",
+        "copied": "Link copied",
+        "downloadQr": "Download QR (PDF)"
+      }
     }
   },
   "customerSurveys": {

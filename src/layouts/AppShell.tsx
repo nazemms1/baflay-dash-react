@@ -11,6 +11,7 @@ import { localizedName } from "@/lib/localized";
 import { LanguageSwitch } from "@/components/ui/LanguageSwitch";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { RouteProgress } from "@/components/ui/RouteProgress";
+import { InstallAppButton } from "@/features/pwa/InstallAppButton";
 import { canSeeItem, NAV_GROUPS } from "./navigation";
 
 export function AppShell() {
@@ -126,6 +127,10 @@ function Sidebar({
           );
         })}
       </nav>
+
+      <div className="border-t border-night-line px-3 py-3 empty:hidden">
+        <InstallAppButton />
+      </div>
 
       <footer
         dir="ltr"

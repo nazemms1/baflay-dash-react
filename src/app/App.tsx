@@ -7,6 +7,7 @@ import { setSessionExpiredHandler } from "@/lib/http/client";
 import { setForbiddenHandler } from "@/lib/http/forbidden";
 import { useSession } from "@/features/auth/session-store";
 import { ApiError } from "@/lib/http/errors";
+import { UpdatePrompt } from "@/features/pwa/UpdatePrompt";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +45,7 @@ export default function App() {
       {/* بلا انتقالات React: تبدأ مؤشرات التحميل فوراً عند التنقل، بدل إبقاء الصفحة القديمة حتى تكتمل الجديدة. */}
       <RouterProvider router={router} useTransitions={false} />
       <Toaster position="top-center" richColors closeButton />
+      <UpdatePrompt />
     </QueryClientProvider>
   );
 }

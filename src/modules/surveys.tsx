@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { TFunction } from "i18next";
-import { Plus, Trash2 } from "lucide-react";
+import { Copy, Download, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SelectField, TextArea, Toggle } from "@/components/ui/Fields";
@@ -12,6 +12,7 @@ import { toApiError } from "@/lib/http/errors";
 import { formatDateTime } from "@/lib/format";
 import { countries, customerSurveys, surveys, type Named } from "@/services";
 import type { CrudModule, FormProps } from "@/components/crud/types";
+import { downloadFormSheet } from "@/features/surveys/form-sheet";
 import { textColumn } from "./shared";
 
 const DELETE = ["destroy", "delete"] as const;
@@ -22,6 +23,9 @@ type Question = { question: string; question_ar: string; type: string; required:
 /** الأنواع كما يستقبلها الخادم، والخيارات تظهر فقط للأنواع التي تحتاجها. */
 const CHOICE_TYPES = ["mcq", "multiple-choice"];
 const QUESTION_TYPES = ["mcq", "multiple-choice", "rating", "text", "number"];
+
+/** الحقول التي تعرض خطأها بجانبها؛ أي خطأ آخر يظهر في أعلى النموذج. */
+const FIELDS_WITH_ERRORS = ["title", "title_ar", "slug", "closes_at", "is_public"];
 
 const emptyQuestion = (): Question => ({
   question: "",
@@ -35,6 +39,27 @@ const emptyQuestion = (): Question => ({
 });
 
 const str = (value: unknown) => (typeof value === "string" ? value : value == null ? "" : String(value));
+
+/** المواصفة ترسل الوقت بست خانات كسرية، وبعض المتصفحات لا تقرؤها، فنُبقي ثلاثاً منها. */
+const parseIso = (value: string) => new Date(value.replace(/(\.\d{3})\d+/, "$1"));
+
+/** وقت UTC من الخادم إلى حقل `datetime-local` بالتوقيت المحلي للمستخدم. */
+function toLocalInput(value: unknown): string {
+  const text = str(value);
+  const date = text ? parseIso(text) : null;
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** من حقل `datetime-local` إلى UTC كما تطلبه المواصفة، والفارغ يعني بلا تاريخ انتهاء. */
+const toUtcIso = (local: string) => (local ? new Date(local).toISOString() : null);
+
+/** انتهى وقت الإغلاق، فيظهر الاستبيان مغلقاً حتى لو كان الرابط مفعّلاً. */
+const isClosed = (value: unknown) => {
+  const text = str(value);
+  return text !== "" && parseIso(text).getTime() <= Date.now();
+};
 
 /** الأسئلة من السجل، بالشكل نفسه الذي يرسله المحرر. */
 function questionsFrom(record: Named | null): Question[] {
@@ -53,6 +78,17 @@ function questionsFrom(record: Named | null): Question[] {
   });
 }
 
+/** الأسئلة كما تُرسل: الخيارات الفارغة لا تُرسل، والأنواع غير الاختيارية لا تحمل خيارات أصلاً. */
+function questionPayload(questions: Question[]) {
+  return questions.map((q) => ({
+    question: q.question,
+    question_ar: q.question_ar,
+    type: q.type,
+    required: q.required,
+    answers: CHOICE_TYPES.includes(q.type) ? q.answers.filter((a) => a.answer || a.answer_ar) : [],
+  }));
+}
+
 /** محرر القالب: بيانات الاستبيان، ثم أسئلته، ولكل سؤال خياراته عند الحاجة. */
 export function SurveyTemplateForm({ record, onDone }: FormProps<Named>) {
   const { t } = useTranslation();
@@ -69,6 +105,9 @@ export function SurveyTemplateForm({ record, onDone }: FormProps<Named>) {
     is_active: source?.is_active !== false,
     allow_anonymous: Boolean(source?.allow_anonymous),
     show_results: Boolean(source?.show_results),
+    is_public: Boolean(source?.is_public),
+    slug: str(source?.slug),
+    closes_at: toLocalInput(source?.closes_at),
   });
   const [questions, setQuestions] = useState<Question[]>(() => questionsFrom(record));
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +139,10 @@ export function SurveyTemplateForm({ record, onDone }: FormProps<Named>) {
         Object.entries(apiError.fieldErrors).map(([key, messages]) => [key, messages[0] ?? ""])
       );
       setFieldErrors(mapped);
-      setError(Object.keys(mapped).length === 0 ? apiError.message : null);
+      // أخطاء الحقول المعروضة تظهر بجانبها، وأي خطأ آخر (مثل قفل الأسئلة) يظهر في أعلى النموذج.
+      const keys = Object.keys(mapped);
+      const allShownBesideFields = keys.length > 0 && keys.every((key) => FIELDS_WITH_ERRORS.includes(key));
+      setError(allShownBesideFields ? null : apiError.message);
     },
   });
 
@@ -115,6 +157,31 @@ export function SurveyTemplateForm({ record, onDone }: FormProps<Named>) {
           : q
       )
     );
+
+  const publicUrl = str(source?.public_url);
+  const slugChanged = Boolean(record) && header.slug.trim() !== "" && header.slug.trim() !== str(source?.slug);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      toast.success(t("surveys.form.share.copied"));
+    } catch {
+      toast.error(t("errors.unexpected"));
+    }
+  }
+
+  async function printSheet() {
+    try {
+      await downloadFormSheet({
+        title: str(source?.title),
+        title_ar: str(source?.title_ar),
+        slug: str(source?.slug),
+        public_url: publicUrl,
+      });
+    } catch {
+      toast.error(t("errors.unexpected"));
+    }
+  }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,18 +198,17 @@ export function SurveyTemplateForm({ record, onDone }: FormProps<Named>) {
 
     setFieldErrors({});
     setError(null);
-    save.mutate({
-      ...header,
-      country_id: header.country_id,
-      questions: questions.map((q) => ({
-        question: q.question,
-        question_ar: q.question_ar,
-        type: q.type,
-        required: q.required,
-        // الخيارات الفارغة لا تُرسل، والأنواع غير الاختيارية لا تحمل خيارات أصلاً.
-        answers: CHOICE_TYPES.includes(q.type) ? q.answers.filter((a) => a.answer || a.answer_ar) : [],
-      })),
-    });
+
+    const { closes_at, slug, ...fields } = header;
+    const payload: Record<string, unknown> = { ...fields, closes_at: toUtcIso(closes_at) };
+    // الرابط لا يُمسح بعد حفظه: الحقل الفارغ على التعديل لا يُرسل، والرابط يُرسل عند الإنشاء أو عند تغييره.
+    const link = slug.trim();
+    if (link && (!record || link !== str(source?.slug))) payload.slug = link;
+    // الخادم يرفض الأسئلة كلها إذا كان في الاستبيان إجابة واحدة، فلا تُرسل إلا عند تغييرها.
+    const questionsChanged =
+      !record || JSON.stringify(questionPayload(questions)) !== JSON.stringify(questionPayload(questionsFrom(record)));
+    if (questionsChanged) payload.questions = questionPayload(questions);
+    save.mutate(payload);
   }
 
   const typeLabel = (type: string) => t(`surveys.types.${type}`, { defaultValue: type });
@@ -168,6 +234,39 @@ export function SurveyTemplateForm({ record, onDone }: FormProps<Named>) {
         <Toggle label={t("surveys.form.isActive")} checked={header.is_active} onChange={(v) => setHeader({ ...header, is_active: v })} />
         <Toggle label={t("surveys.form.allowAnonymous")} checked={header.allow_anonymous} onChange={(v) => setHeader({ ...header, allow_anonymous: v })} />
         <Toggle label={t("surveys.form.showResults")} checked={header.show_results} onChange={(v) => setHeader({ ...header, show_results: v })} />
+      </section>
+
+      <section className="space-y-4">
+        <h3 className="font-semibold text-ink">{t("surveys.form.share.title")}</h3>
+        <Toggle label={t("surveys.form.share.isPublic")} hint={t("surveys.form.share.isPublicHint")} checked={header.is_public}
+          onChange={(v) => setHeader({ ...header, is_public: v })} />
+        {!header.is_public && <p className="text-sm text-muted">{t("surveys.form.share.offNote")}</p>}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Input label={t("surveys.form.share.slug")} dir="ltr" maxLength={80} value={header.slug}
+              onChange={(e) => setHeader({ ...header, slug: e.target.value })} error={fieldErrors.slug || null} />
+            <p className="text-xs text-muted">{t("surveys.form.share.slugHint")}</p>
+          </div>
+          <div className="space-y-2">
+            <Input label={t("surveys.form.share.closesAt")} type="datetime-local" dir="ltr" value={header.closes_at}
+              onChange={(e) => setHeader({ ...header, closes_at: e.target.value })} error={fieldErrors.closes_at || null} />
+            <p className="text-xs text-muted">{t("surveys.form.share.closesAtHint")}</p>
+          </div>
+        </div>
+        {slugChanged && <p className="rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">{t("surveys.form.share.slugWarning")}</p>}
+        {publicUrl && (
+          <div className="space-y-3">
+            <Input label={t("surveys.form.share.link")} dir="ltr" readOnly value={publicUrl} />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" size="sm" onClick={copyLink}>
+                <Copy className="size-4" aria-hidden /> {t("surveys.form.share.copy")}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={printSheet}>
+                <Download className="size-4" aria-hidden /> {t("surveys.form.share.downloadQr")}
+              </Button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="space-y-4">
@@ -297,6 +396,14 @@ export const surveysModule = (t: TFunction): CrudModule<Named> => ({
       },
     },
     textColumn<Named>("date", t("surveys.form.date")),
+    textColumn<Named>("closes_at", t("surveys.form.share.closesAtColumn"), (row) => {
+      const closesAt = (row as Record<string, unknown>).closes_at;
+      return isClosed(closesAt) ? (
+        <span className="rounded-full bg-danger-soft px-2.5 py-0.5 text-xs font-medium text-danger">{t("surveys.form.share.closed")}</span>
+      ) : (
+        <span className="text-ink-soft">{formatDateTime(str(closesAt) || null)}</span>
+      );
+    }),
     textColumn<Named>("is_active", t("surveys.form.isActive"), (row) => (
       <span className="text-ink-soft">{(row as Record<string, unknown>).is_active === false ? t("crud.hidden") : t("crud.visible")}</span>
     )),
