@@ -5,6 +5,7 @@ import { ItemAddonsAction } from "@/features/items/ItemAddonsAction";
 import { MenuDetails } from "@/features/menus/MenuDetails";
 import { MenuRowActions } from "@/features/menus/MenuRowActions";
 import { CityForm } from "@/features/geography/CityForm";
+import { CityBranchesCell, CityStateCell } from "@/features/geography/CityColumns";
 import { BranchRowActions } from "@/features/branches/BranchRowActions";
 import { BranchStatusBadge } from "@/features/branches/BranchStatusBadge";
 import { localizedRecord } from "@/lib/localized";
@@ -57,11 +58,19 @@ export const citiesModule = (t: TFunction): CrudModule<GeoEntity> => ({
   ],
   // النموذج المخصص يضيف الولاية من داخله، وهذا ما كان يفعله الداشبورد القديم.
   form: CityForm,
+  // الولاية والبلد من قائمة الولايات، والفروع من السجل نفسه: كل ما يلزم لمعرفة موقع المدينة.
   columns: [
     nameColumn<GeoEntity>(),
-    textColumn<GeoEntity>("state", t("crud.col.state"), (row) => (
-      <span className="text-ink-soft">{relationName(row, "state", "ar")}</span>
-    )),
+    {
+      key: "state",
+      header: t("crud.col.state"),
+      render: (row) => <CityStateCell row={row} />,
+    },
+    {
+      key: "branches",
+      header: t("crud.col.branches"),
+      render: (row) => <CityBranchesCell row={row} />,
+    },
   ],
   permissions: {
     index: "cities.index",

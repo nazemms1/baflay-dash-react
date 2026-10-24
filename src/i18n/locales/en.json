@@ -321,7 +321,8 @@
     },
     "col": {
       "name": "Name",
-      "state": "State"
+      "state": "State",
+      "branches": "Branches"
     },
     "field": {
       "name": "Name",
