@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { formatNumber } from "@/lib/format";
 import { localizedRecord, type RawBilingual } from "@/lib/localized";
 import { groupFields } from "./groups";
+import { permissionGroupOf, permissionLabel } from "./permissionLabels";
 import { defaultValues } from "./payload";
 import type { CrudModule, FieldDef, RowColumn } from "./types";
 
@@ -73,6 +74,52 @@ function Bilingual({ en, ar, multiline }: { en: string; ar: string; multiline?: 
         </span>
         <span dir="rtl" className={clsx("min-w-0 break-words", body)}>{ar || "—"}</span>
       </p>
+    </div>
+  );
+}
+
+/**
+ * صلاحيات الدور مجمّعة حسب القسم، بتسمياتها العربية كما في شاشة الاختيار. كل قسم يعرض عدد صلاحياته،
+ * وتسمية الخادم بالإنجليزية تظهر عند الوقوف على الشارة.
+ */
+function PermissionGroups({ entries }: { entries: unknown }) {
+  const { t } = useTranslation();
+  const list = Array.isArray(entries) ? (entries as unknown[]) : [];
+  const items = list.flatMap((entry) => {
+    const name = typeof entry === "string" ? entry : str((entry as RecordLike | null)?.name);
+    if (!name) return [];
+    const serverLabel = typeof entry === "string" ? "" : str((entry as RecordLike).label);
+    return [{ name, serverLabel, label: permissionLabel(name, serverLabel || name, t) }];
+  });
+  if (items.length === 0) return <span className="text-muted">—</span>;
+
+  const groups = new Map<string, typeof items>();
+  for (const item of items) {
+    const group = permissionGroupOf(item.name);
+    groups.set(group, [...(groups.get(group) ?? []), item]);
+  }
+
+  return (
+    <div className="space-y-4">
+      {[...groups].map(([group, rows]) => (
+        <div key={group}>
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-soft">
+            <span>{t(`permissions.segments.${group}`, { defaultValue: group })}</span>
+            <span className="tabular-nums text-muted">({rows.length})</span>
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {rows.map((row) => (
+              <li
+                key={row.name}
+                title={row.serverLabel || row.name}
+                className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-ink ring-1 ring-primary/30"
+              >
+                {row.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 }
@@ -217,6 +264,8 @@ function FieldValue({
         </ul>
       );
     }
+    case "permissions":
+      return <PermissionGroups entries={raw} />;
     default:
       return str(raw) ? <span className="break-words">{str(raw)}</span> : <span className="text-muted">—</span>;
   }
@@ -308,7 +357,8 @@ export function RecordDetails<T extends { id: number | string }>({
               );
             }
 
-            const wide = field.kind === "textarea" || field.kind === "bilingual" || field.kind === "multiselect";
+            const wide =
+              field.kind === "textarea" || field.kind === "bilingual" || field.kind === "multiselect" || field.kind === "permissions";
             return (
               <Tile key={field.key} label={field.label} wide={wide}>
                 <FieldValue field={field} record={source} language={language} />

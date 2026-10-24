@@ -6,13 +6,15 @@ import { Bike, Inbox, RefreshCw, Search } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/ui/States";
 import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
+import { RemoteSelect } from "@/components/ui/RemoteSelect";
 import { Segmented, type SegmentOption } from "@/components/ui/Segmented";
 import { Skeleton } from "@/components/ui/Bars";
-import { usePermissions } from "@/features/auth/hooks";
+import { useBranchScope, usePermissions } from "@/features/auth/hooks";
 import { nextStatusesOf } from "@/features/orders/orderStatus";
 import { toNumber, toText } from "@/lib/coerce";
 import { formatDay } from "@/lib/format";
-import { driverOrders, type Named } from "@/services";
+import { remoteSource } from "@/modules/shared";
+import { branches, driverOrders, type Named } from "@/services";
 import { DRIVER_PERMISSIONS } from "./permissions";
 import { driverErrorCode, driverErrorMessage, STALE_ORDER_CODES } from "./driverErrors";
 import { toDriverSummary, todayIso, type AccountRow } from "./driverReport";
@@ -23,6 +25,9 @@ import { customerOf, refOf } from "./orderFields";
 
 type DriverTab = "active" | "done" | "failed" | "all";
 type DriverAction = "pickup" | "delivered" | "failed";
+
+// الفروع تُبحث في الخادم كما في صفحة الطلبات، فالفلتر يعرض الطلبات والأرقام لفرع واحد عند اختياره.
+const BRANCH_FILTER = remoteSource("branches", branches);
 
 interface ActionVars {
   order: Named;
@@ -42,11 +47,16 @@ export function DriverOrdersPage() {
   const today = todayIso();
   const [tab, setTab] = useState<DriverTab>("active");
   const [date, setDate] = useState(today);
+  const [branchFilter, setBranchFilter] = useState<number | null>(null);
+  const [branchLabel, setBranchLabel] = useState("");
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [detailsId, setDetailsId] = useState<number | null>(null);
   const [delivering, setDelivering] = useState<Named | null>(null);
   const [failing, setFailing] = useState<Named | null>(null);
+  const scope = useBranchScope();
+  // المستخدم المرتبط بفرع يرى فرعه فقط، والخادم يفرض ذلك أيضاً.
+  const branchId = scope.isBranchScoped ? scope.branchId : branchFilter;
 
   const canList = permissions.has(DRIVER_PERMISSIONS.index);
   const canShow = permissions.has(DRIVER_PERMISSIONS.show);
@@ -58,18 +68,23 @@ export function DriverOrdersPage() {
   };
 
   const list = useQuery({
-    queryKey: ["driver-orders", "list", tab, date, page],
+    queryKey: ["driver-orders", "list", tab, date, branchId, page],
     enabled: canList,
     placeholderData: keepPreviousData,
     // الطلب الجاري لا يرتبط باليوم: ما زال معه أو في طريقه فيظهر دائماً، أما المنتهي فيُفلتر باليوم.
-    queryFn: ({ signal }) => driverOrders.list({ status: tab, date: tab === "active" ? undefined : date, page }, signal),
+    queryFn: ({ signal }) =>
+      driverOrders.list(
+        { status: tab, date: tab === "active" ? undefined : date, branch_id: branchId ?? undefined, page },
+        signal
+      ),
   });
 
   const summary = useQuery<AccountRow[]>({
-    queryKey: ["driver-orders", "summary", date],
+    queryKey: ["driver-orders", "summary", date, branchId],
     enabled: canSummary,
     placeholderData: keepPreviousData,
-    queryFn: ({ signal }) => driverOrders.summary({ date }, signal).then(toDriverSummary),
+    queryFn: ({ signal }) =>
+      driverOrders.summary({ date, branch_id: branchId ?? undefined }, signal).then(toDriverSummary),
   });
 
   const details = useQuery({
@@ -141,8 +156,8 @@ export function DriverOrdersPage() {
             <p className="text-sm text-muted">{date === today ? t("drivers.today") : formatDay(date)}</p>
           </div>
         </div>
-        <div className="flex w-full items-end gap-2 sm:w-auto">
-          <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
+        <div className="grid w-full grid-cols-[1fr_1fr_auto] items-end gap-2 sm:flex sm:w-auto">
+          <div className="min-w-0 sm:w-44">
             <Input
               label={t("ordersPage.dateFilter")}
               type="date"
@@ -150,6 +165,21 @@ export function DriverOrdersPage() {
               onChange={(event) => {
                 // اليوم لا يُمسح، فالشاشة تبقى على يوم محدد دائماً.
                 setDate(event.target.value || today);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="min-w-0 sm:w-56">
+            <RemoteSelect
+              label={t("ordersPage.branchFilter")}
+              source={BRANCH_FILTER}
+              value={branchId}
+              fallbackLabel={branchLabel || undefined}
+              disabled={scope.isBranchScoped}
+              placeholder={t("ordersPage.allBranches")}
+              onChange={(value, label) => {
+                setBranchFilter(value === null ? null : Number(value));
+                setBranchLabel(label);
                 setPage(1);
               }}
             />

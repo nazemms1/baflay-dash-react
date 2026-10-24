@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type { CrudModule, OptionSource } from "@/components/crud/types";
+import { permissionGroupOf, permissionLabel } from "@/components/crud/permissionLabels";
 import { DRIVER_ROLE } from "@/features/drivers/permissions";
 import { branches, contactUs, listAll, permissionCatalog, roles, users, type Named } from "@/services";
 import { UserRowActions } from "@/features/users/UserActions";
@@ -51,8 +52,8 @@ export const usersModule = (t: TFunction, scoped = false): CrudModule<Named> => 
     },
     { kind: "date", key: "date_of_birth", label: t("profile.dateOfBirth"), required: true },
     { kind: "image", key: "picture", label: t("crud.field.picture") },
-    // خط العرض في `location_x` وخط الطول في `location_y`، كما في الفروع.
-    { kind: "location", key: "location_x", lngKey: "location_y", label: t("users.userLocation") },
+    // خط العرض في `location_x` وخط الطول في `location_y`، كما في الفروع. الموقع يُضبط بعد الإنشاء فقط.
+    { kind: "location", key: "location_x", lngKey: "location_y", label: t("users.userLocation"), editOnly: true },
     ...(scoped
       ? []
       : [
@@ -135,16 +136,9 @@ const permissionOptions = (t: TFunction): OptionSource => ({
     return rows.map((row) => {
       const record = row as Record<string, unknown>;
       const name = String(record.name ?? "");
-      const segments = name.split(".").filter(Boolean);
-      const label =
-        segments.length < 2
-          ? String(record.label ?? name)
-          : segments
-              .slice(1)
-              .map((segment) => t(`permissions.segments.${segment}`, { defaultValue: segment }))
-              .join(" · ");
+      const label = permissionLabel(name, String(record.label ?? name), t);
       // القيمة اسم الصلاحية نفسه، فهذا ما يستقبله الخادم في الدور.
-      return { value: name || String(row.id), label: label || `#${row.id}`, group: segments[0] ?? "", hint: name };
+      return { value: name || String(row.id), label: label || `#${row.id}`, group: permissionGroupOf(name), hint: name };
     });
   },
 });
@@ -178,7 +172,7 @@ export const rolesModule = (t: TFunction): CrudModule<Named> => ({
     textColumn<Named>("name", t("crud.field.technicalName")),
   ],
   permissions: {
-    index: "roles.index",
+    index: "roles.show",
     show: "roles.show",
     create: "roles.store",
     update: "roles.update",

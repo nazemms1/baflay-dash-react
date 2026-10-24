@@ -978,17 +978,26 @@
     "opensAt": "Opens at {{time}}",
     "hidden": "Hidden"
   },
+  "clock": {
+    "day": "Day",
+    "month": "Month",
+    "year": "Year",
+    "hour": "Hour",
+    "minute": "Minute",
+    "period": "Period"
+  },
   "openingHours": {
     "open": "Hours and holidays",
     "title": "Hours for {{name}}",
-    "hint": "The branch is open every day by default. Set the hours for each open day (up to three periods), and tick Day off for a closed day. Nothing is saved until you press Save.",
+    "hint": "The branch is open every day by default. Set the hours for each open day (up to three periods), and tick Day off for a closed day. A period whose closing time is earlier than its opening time ends the next day. Nothing is saved until you press Save.",
     "from": "From",
     "to": "To",
     "addPeriod": "Add period",
     "removePeriod": "Remove period",
     "holiday": "Day off",
     "closedToday": "The branch is closed this day",
-    "invalidTime": "Use HH:MM in 24-hour format",
+    "invalidTime": "Choose the full opening and closing time",
+    "nextDay": "Ends the next day",
     "sameTime": "Opening and closing times cannot be the same",
     "clearHolidays": "Clear days off",
     "allHoliday": "All days cannot be days off.",

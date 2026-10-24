@@ -82,7 +82,7 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "admin",
     items: [
       { key: "users", path: "/users", icon: Users, permission: "users.index" },
-      { key: "roles", path: "/roles", icon: ShieldCheck, permission: "roles.index" },
+      { key: "roles", path: "/roles", icon: ShieldCheck, permission: "roles.show" },
       { key: "countries", path: "/countries", icon: Globe, permission: "countries.index" },
       { key: "cities", path: "/cities", icon: MapPin, permission: "cities.index" },
       { key: "game", path: "/game-dashboard", icon: Gamepad2, permission: "game.players.delete" },
