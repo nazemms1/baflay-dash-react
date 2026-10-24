@@ -36,7 +36,7 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar onOpenMenu={() => setDrawerOpen(true)} />
-        <main className="mx-auto w-full max-w-[1400px] flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="w-full flex-1 p-4 sm:p-6 lg:p-8">
           {/* المفتاح بالمسار يعيد تشغيل حركة الظهور عند كل صفحة، والحدّ يُظهر مؤشر التحميل أثناء جلب الصفحة. */}
           <div key={location.pathname} className="animate-page-in">
             <Suspense fallback={<PageLoader />}>
@@ -160,7 +160,7 @@ function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   }).format(new Date());
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur sm:px-6 lg:px-8">
       <button
         type="button"
         onClick={onOpenMenu}

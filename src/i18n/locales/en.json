@@ -894,6 +894,8 @@
       "restore": "Restore",
       "order": "Sort order",
       "availability": "Availability",
+      "payment": "Payment",
+      "methods": "Methods",
       "invoice": "Invoice",
       "alerts": "Alerts",
       "queue": "Queue",
@@ -969,6 +971,16 @@
     "pickupSaved": "Pickup availability saved",
     "keepOne": "At least one order type must stay open. To stop everything, close the branch.",
     "lastType": "This is the last order type still open. To stop everything, close the branch."
+  },
+  "paymentMethods": {
+    "cash": "Cash payment",
+    "card": "Card payment",
+    "accepted": "Accepted",
+    "notAccepted": "Not accepted",
+    "saved": "Payment methods saved",
+    "keepOne": "At least one payment method must stay enabled.",
+    "lastMethod": "This is the last payment method still enabled, so it can't be turned off.",
+    "noCardAccount": "This branch has no online account, so card payment isn't available."
   },
   "branchStatus": {
     "column": "Status now",
@@ -1149,7 +1161,6 @@
       "none": "No driver",
       "noDrivers": "No drivers in this branch.",
       "needsDriver": "Awaiting driver",
-      "otherBranch": "Other branch",
       "change": "Change driver",
       "assign": "Assign driver"
     },

@@ -8,30 +8,32 @@ import { DRIVER_ROLE } from "./permissions";
  * مصدر بحث عن السائقين على الخادم: كل طلب يجلب عشرين سائقاً يطابقون ما كُتب، والسائق المختار
  * يُجلب وحده بمعرّفه. لا تُنزَّل القائمة كلها.
  *
- * كل السائقين الذين يراهم الحساب يظهرون، وسائق من فرع آخر يحمل وسماً بذلك. الخادم هو الذي يقرر
- * إن كان الإسناد مسموحاً، ويرد برمز واضح عند الرفض.
+ * مع فرع محدد لا يظهر إلا سائقو ذلك الفرع، فسائق فرع آخر لا يُعرض أصلاً. الخادم يبقى هو الذي
+ * يقرر إن كان الإسناد مسموحاً، ويرد برمز واضح عند الرفض.
  */
-export function driverSource(branchId: number | null, otherBranchLabel: string): RemoteSource {
-  const toOption = (row: Named) => {
-    const name = toText(row.name) || `#${toText(row.id)}`;
-    const driverBranch = toNullableNumber(row.branch_id);
-    const isOtherBranch = branchId !== null && driverBranch !== null && driverBranch !== branchId;
-    return {
-      value: toNumber(row.id),
-      label: isOtherBranch ? `${name} · ${otherBranchLabel}` : name,
-    };
-  };
+export function driverSource(branchId: number | null): RemoteSource {
+  const toOption = (row: Named) => ({
+    value: toNumber(row.id),
+    label: toText(row.name) || `#${toText(row.id)}`,
+  });
+  const belongsHere = (row: Named) => branchId === null || toNullableNumber(row.branch_id) === branchId;
 
   return {
-    // كل فرع له مفتاح تخزين مؤقت مستقل، لأن الوسم يتعلق بفرع الطلب.
+    // كل فرع له مفتاح تخزين مؤقت مستقل، لأن القائمة نفسها تتغير بالفرع.
     cacheKey: `drivers-${branchId ?? "all"}`,
     search: async (term, page, signal) => {
       const result = await users.list(
-        { page, per_page: 20, role: DRIVER_ROLE, ...(term ? { search: term } : {}) },
+        {
+          page,
+          per_page: 20,
+          role: DRIVER_ROLE,
+          ...(branchId !== null ? { branch_id: branchId } : {}),
+          ...(term ? { search: term } : {}),
+        },
         signal
       );
       return {
-        items: result.items.map(toOption),
+        items: result.items.filter(belongsHere).map(toOption),
         lastPage: result.meta.lastPage,
       };
     },
@@ -50,7 +52,7 @@ export function driverSource(branchId: number | null, otherBranchLabel: string):
  * الخيار الأول لا يأتي من الخادم، لذلك يُضاف محلياً في الصفحة الأولى من غير بحث.
  */
 export function driverFilterSource(t: TFunction): RemoteSource {
-  const base = driverSource(null, "");
+  const base = driverSource(null);
   const needsDriver = { value: "needs", label: t("drivers.assign.needsDriver") };
 
   return {
