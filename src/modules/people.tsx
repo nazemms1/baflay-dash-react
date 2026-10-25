@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next";
 import type { CrudModule, OptionSource } from "@/components/crud/types";
+import { permissionGroupOf, permissionLabel } from "@/components/crud/permissionLabels";
 import { DRIVER_ROLE } from "@/features/drivers/permissions";
 import { branches, contactUs, listAll, permissionCatalog, roles, users, type Named } from "@/services";
 import { UserRowActions } from "@/features/users/UserActions";
@@ -7,6 +8,7 @@ import { UserDetails } from "@/features/people/UserDetails";
 import { BranchName } from "@/features/people/BranchName";
 import { userEmail, userPhone } from "@/features/people/released";
 import { ReleasedValue } from "@/components/ui/ReleasedValue";
+import { marketOptions } from "@/features/markets/marketOptions";
 import { remoteSource, textColumn } from "./shared";
 
 const DELETE = ["destroy", "delete"] as const;
@@ -51,8 +53,8 @@ export const usersModule = (t: TFunction, scoped = false): CrudModule<Named> => 
     },
     { kind: "date", key: "date_of_birth", label: t("profile.dateOfBirth"), required: true },
     { kind: "image", key: "picture", label: t("crud.field.picture") },
-    // خط العرض في `location_x` وخط الطول في `location_y`، كما في الفروع.
-    { kind: "location", key: "location_x", lngKey: "location_y", label: t("users.userLocation") },
+    // خط العرض في `location_x` وخط الطول في `location_y`، كما في الفروع. الموقع يُضبط بعد الإنشاء فقط.
+    { kind: "location", key: "location_x", lngKey: "location_y", label: t("users.userLocation"), editOnly: true },
     ...(scoped
       ? []
       : [
@@ -135,16 +137,9 @@ const permissionOptions = (t: TFunction): OptionSource => ({
     return rows.map((row) => {
       const record = row as Record<string, unknown>;
       const name = String(record.name ?? "");
-      const segments = name.split(".").filter(Boolean);
-      const label =
-        segments.length < 2
-          ? String(record.label ?? name)
-          : segments
-              .slice(1)
-              .map((segment) => t(`permissions.segments.${segment}`, { defaultValue: segment }))
-              .join(" · ");
+      const label = permissionLabel(name, String(record.label ?? name), t);
       // القيمة اسم الصلاحية نفسه، فهذا ما يستقبله الخادم في الدور.
-      return { value: name || String(row.id), label: label || `#${row.id}`, group: segments[0] ?? "", hint: name };
+      return { value: name || String(row.id), label: label || `#${row.id}`, group: permissionGroupOf(name), hint: name };
     });
   },
 });
@@ -178,7 +173,7 @@ export const rolesModule = (t: TFunction): CrudModule<Named> => ({
     textColumn<Named>("name", t("crud.field.technicalName")),
   ],
   permissions: {
-    index: "roles.index",
+    index: "roles.show",
     show: "roles.show",
     create: "roles.store",
     update: "roles.update",
@@ -187,7 +182,10 @@ export const rolesModule = (t: TFunction): CrudModule<Named> => ({
   nameOf: (row) => String((row as Record<string, unknown>).label ?? row.id),
 });
 
-/** تواصل معنا: عرض الرسائل فقط، كما في الأصلي (لا إنشاء ولا تعديل ولا حذف). */
+/**
+ * تواصل معنا: عرض الرسائل فقط، كما في الأصلي (لا إنشاء ولا تعديل ولا حذف). كل رسالة تحمل سوقها
+ * `market_code`، ويُفلتر صندوق الرسائل بدولة واحدة. الرسالة بلا سوق تظهر بـ«—».
+ */
 export const contactUsModule = (t: TFunction): CrudModule<Named> => ({
   id: "contact-us",
   titleKey: "nav.contactUs",
@@ -199,16 +197,19 @@ export const contactUsModule = (t: TFunction): CrudModule<Named> => ({
   fields: [
     { kind: "text", key: "name", label: t("crud.field.name") },
     { kind: "email", key: "email", label: t("crud.field.email") },
+    { kind: "text", key: "market_code", label: t("markets.market"), ltr: true },
     { kind: "textarea", key: "message", label: t("crud.field.message") },
   ],
   columns: [
     textColumn<Named>("name", t("crud.field.name")),
     textColumn<Named>("email", t("crud.field.email")),
+    textColumn<Named>("market_code", t("markets.market")),
     textColumn<Named>("message", t("crud.field.message"), (row) => {
       const message = String((row as Record<string, unknown>).message ?? "");
       return <span className="line-clamp-1 max-w-md text-ink-soft">{message || "—"}</span>;
     }),
   ],
+  filters: [{ key: "market", label: t("markets.market"), options: marketOptions(t, { includeGeneral: false }) }],
   permissions: {
     index: "contact-us.index",
     show: "contact-us.show",

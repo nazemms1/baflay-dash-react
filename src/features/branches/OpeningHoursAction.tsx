@@ -7,6 +7,7 @@ import { usePermissions } from "@/features/auth/hooks";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
+import { TimeField } from "@/components/ui/DateTimeFields";
 import { currentLanguage } from "@/i18n";
 import { toNumber, toText } from "@/lib/coerce";
 import { toApiError } from "@/lib/http/errors";
@@ -16,6 +17,7 @@ import {
   MAX_PERIODS,
   NEW_PERIOD,
   WEEK_DAYS,
+  closesNextDay,
   hoursFrom,
   hoursIssues,
   isAlwaysOpen,
@@ -190,36 +192,34 @@ function OpeningHoursDialog({ row, onClose }: { row: Named; onClose: () => void 
                 ) : (
                   <>
                     {periods.map((period, index) => (
-                      <div key={index} className="grid grid-cols-[1fr_1fr_auto] items-start gap-2">
-                        <Input
-                          label={t("openingHours.from")}
-                          dir="ltr"
-                          inputMode="numeric"
-                          placeholder="HH:MM"
-                          maxLength={5}
-                          value={period.opens}
-                          error={periodError(day, index)}
-                          onChange={(event) => editPeriod(day, index, { opens: event.target.value.trim() })}
-                        />
-                        <Input
-                          label={t("openingHours.to")}
-                          dir="ltr"
-                          inputMode="numeric"
-                          placeholder="HH:MM"
-                          maxLength={5}
-                          value={period.closes}
-                          onChange={(event) => editPeriod(day, index, { closes: event.target.value.trim() })}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removePeriod(day, index)}
-                          disabled={periods.length === 1}
-                          aria-label={t("openingHours.removePeriod")}
-                          title={t("openingHours.removePeriod")}
-                          className="mt-7 grid size-11 cursor-pointer place-items-center rounded-xl text-muted ring-1 ring-line transition hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 sm:size-10"
-                        >
-                          <X className="size-4" aria-hidden />
-                        </button>
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
+                            <TimeField
+                              label={t("openingHours.from")}
+                              value={period.opens}
+                              error={periodError(day, index)}
+                              onChange={(opens) => editPeriod(day, index, { opens })}
+                            />
+                            <TimeField
+                              label={t("openingHours.to")}
+                              value={period.closes}
+                              endOfDay
+                              onChange={(closes) => editPeriod(day, index, { closes })}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removePeriod(day, index)}
+                            disabled={periods.length === 1}
+                            aria-label={t("openingHours.removePeriod")}
+                            title={t("openingHours.removePeriod")}
+                            className="mt-7 grid size-11 cursor-pointer place-items-center rounded-xl text-muted ring-1 ring-line transition hover:text-danger disabled:cursor-not-allowed disabled:opacity-40 sm:size-10"
+                          >
+                            <X className="size-4" aria-hidden />
+                          </button>
+                        </div>
+                        {closesNextDay(period) && <p className="text-xs text-muted">{t("openingHours.nextDay")}</p>}
                       </div>
                     ))}
                     {periods.length < MAX_PERIODS && (

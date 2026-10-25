@@ -50,6 +50,8 @@
     "menus": "Menus",
     "ingredients": "Ingredients",
     "galleries": "Galleries",
+    "heroSlides": "Home hero",
+    "marketContacts": "Contact channels",
     "orders": "Orders",
     "surveyAnswers": "Customer answers",
     "surveyTemplates": "Survey templates",
@@ -284,6 +286,100 @@
       "lowRated": "Low-rated orders"
     }
   },
+  "heroSlides": {
+    "country": "Country",
+    "noCountries": "No country has a valid code yet (such as SY). Add the country code from the Countries screen first.",
+    "title": "Title",
+    "titleEn": "Title in English",
+    "titleAr": "Title in Arabic",
+    "subtitle": "Subtitle",
+    "subtitleEn": "Subtitle in English",
+    "subtitleAr": "Subtitle in Arabic",
+    "desktopImage": "Desktop image",
+    "mobileImage": "Mobile image",
+    "mobileImageHint": "If no mobile image is uploaded, the desktop image is used.",
+    "status": "Status",
+    "live": "Shown to visitors",
+    "inactive": "Off",
+    "active": "Slide is on",
+    "activeHint": "A slide that is off is never shown to visitors.",
+    "saved": "Slide saved",
+    "orderSaved": "Slide order updated",
+    "orderFailed": "Could not update the order",
+    "countryCode": "Country code",
+    "countryCodeHint": "Two uppercase letters, such as SY",
+    "dialCode": "Dial code",
+    "currency": "Currency",
+    "defaultLocale": "Default language",
+    "countryActive": "Country is live for visitors",
+    "errors": {
+      "desktopRequired": "A desktop image is required for a new slide"
+    }
+  },
+  "markets": {
+    "market": "Market",
+    "general": "Shared (all markets)",
+    "generalShort": "Shared"
+  },
+  "galleries": {
+    "layout": "Layout",
+    "layouts": {
+      "offer": "Offers",
+      "instagram": "Instagram",
+      "events": "Events",
+      "standard": "Standard"
+    }
+  },
+  "marketContacts": {
+    "country": "Country",
+    "noCountries": "No country has a valid code yet (such as SY). Add the country code from the Countries screen first.",
+    "type": "Type",
+    "types": {
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "address": "Address",
+      "working_hours": "Working hours",
+      "social": "Social media"
+    },
+    "platform": "Platform",
+    "platforms": {
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "x": "X",
+      "youtube": "YouTube",
+      "snapchat": "Snapchat",
+      "telegram": "Telegram",
+      "linkedin": "LinkedIn",
+      "other": "Other"
+    },
+    "labelEn": "Label in English",
+    "labelAr": "Label in Arabic",
+    "value": "Value",
+    "valueAr": "Value in Arabic",
+    "link": "Link",
+    "status": "Status",
+    "live": "Shown to visitors",
+    "inactive": "Hidden",
+    "active": "Shown to visitors",
+    "activeHint": "A hidden contact is not shown on the website.",
+    "saved": "Contact saved",
+    "orderSaved": "Contact order updated",
+    "orderFailed": "Could not update the order",
+    "hints": {
+      "phone": "International number starting with {{dial}}",
+      "phoneAny": "International number starting with the country code",
+      "url": "Full link starting with https://"
+    },
+    "errors": {
+      "phoneStart": "The number must start with + and the country code",
+      "phoneCountry": "The number must start with {{dial}}",
+      "phoneFormat": "Enter a valid international number",
+      "email": "Enter a valid email address",
+      "url": "The link must start with https://"
+    }
+  },
   "crud": {
     "add": "Add",
     "actions": "Actions",
@@ -321,7 +417,8 @@
     },
     "col": {
       "name": "Name",
-      "state": "State"
+      "state": "State",
+      "branches": "Branches"
     },
     "field": {
       "name": "Name",
@@ -894,6 +991,8 @@
       "restore": "Restore",
       "order": "Sort order",
       "availability": "Availability",
+      "payment": "Payment",
+      "methods": "Methods",
       "invoice": "Invoice",
       "alerts": "Alerts",
       "queue": "Queue",
@@ -936,6 +1035,8 @@
       "branches": "Branches",
       "categories": "Categories",
       "galleries": "Gallery",
+      "markets": "Countries & home",
+      "hero": "Home hero",
       "users": "Users",
       "roles": "Roles",
       "permissions": "Permissions",
@@ -970,6 +1071,16 @@
     "keepOne": "At least one order type must stay open. To stop everything, close the branch.",
     "lastType": "This is the last order type still open. To stop everything, close the branch."
   },
+  "paymentMethods": {
+    "cash": "Cash payment",
+    "card": "Card payment",
+    "accepted": "Accepted",
+    "notAccepted": "Not accepted",
+    "saved": "Payment methods saved",
+    "keepOne": "At least one payment method must stay enabled.",
+    "lastMethod": "This is the last payment method still enabled, so it can't be turned off.",
+    "noCardAccount": "This branch has no online account, so card payment isn't available."
+  },
   "branchStatus": {
     "column": "Status now",
     "open": "Open",
@@ -978,17 +1089,26 @@
     "opensAt": "Opens at {{time}}",
     "hidden": "Hidden"
   },
+  "clock": {
+    "day": "Day",
+    "month": "Month",
+    "year": "Year",
+    "hour": "Hour",
+    "minute": "Minute",
+    "period": "Period"
+  },
   "openingHours": {
     "open": "Hours and holidays",
     "title": "Hours for {{name}}",
-    "hint": "The branch is open every day by default. Set the hours for each open day (up to three periods), and tick Day off for a closed day. Nothing is saved until you press Save.",
+    "hint": "The branch is open every day by default. Set the hours for each open day (up to three periods), and tick Day off for a closed day. A period whose closing time is earlier than its opening time ends the next day. Nothing is saved until you press Save.",
     "from": "From",
     "to": "To",
     "addPeriod": "Add period",
     "removePeriod": "Remove period",
     "holiday": "Day off",
     "closedToday": "The branch is closed this day",
-    "invalidTime": "Use HH:MM in 24-hour format",
+    "invalidTime": "Choose the full opening and closing time",
+    "nextDay": "Ends the next day",
     "sameTime": "Opening and closing times cannot be the same",
     "clearHolidays": "Clear days off",
     "allHoliday": "All days cannot be days off.",
@@ -1140,7 +1260,6 @@
       "none": "No driver",
       "noDrivers": "No drivers in this branch.",
       "needsDriver": "Awaiting driver",
-      "otherBranch": "Other branch",
       "change": "Change driver",
       "assign": "Assign driver"
     },

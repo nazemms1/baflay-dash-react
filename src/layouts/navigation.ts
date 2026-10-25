@@ -9,7 +9,9 @@ import {
   LayoutDashboard,
   MapPin,
   MessageSquare,
+  MonitorPlay,
   Package,
+  Phone,
   ShieldCheck,
   ShoppingBag,
   PlusCircle,
@@ -58,6 +60,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "menus", path: "/menus", icon: BookOpen, permission: "menus.index" },
       { key: "ingredients", path: "/ingredients", icon: Carrot, permission: "ingredients.menus.show" },
       { key: "galleries", path: "/galleries", icon: Images, permission: "galleries.index" },
+      { key: "heroSlides", path: "/hero-slides", icon: MonitorPlay, permission: "markets.hero.slides.index" },
+      { key: "marketContacts", path: "/market-contacts", icon: Phone, permission: "markets.contacts.index" },
     ],
   },
   {
@@ -82,7 +86,7 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "admin",
     items: [
       { key: "users", path: "/users", icon: Users, permission: "users.index" },
-      { key: "roles", path: "/roles", icon: ShieldCheck, permission: "roles.index" },
+      { key: "roles", path: "/roles", icon: ShieldCheck, permission: "roles.show" },
       { key: "countries", path: "/countries", icon: Globe, permission: "countries.index" },
       { key: "cities", path: "/cities", icon: MapPin, permission: "cities.index" },
       { key: "game", path: "/game-dashboard", icon: Gamepad2, permission: "game.players.delete" },

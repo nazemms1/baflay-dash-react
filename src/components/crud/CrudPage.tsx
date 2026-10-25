@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Eye, Pencil, Plus, Search, Trash2, type LucideIcon } from "lucide-react";
@@ -12,16 +12,43 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ResponsiveRecordList, type RecordColumn } from "@/components/ui/ResponsiveRecordList";
 import { Skeleton } from "@/components/ui/Bars";
 import { EmptyState, ErrorState } from "@/components/ui/States";
-import { SelectField } from "@/components/ui/Fields";
+import { SelectField, type Option } from "@/components/ui/Fields";
 import { Input } from "@/components/ui/Input";
 import { currentLanguage } from "@/i18n";
 import { ApiError } from "@/lib/http/errors";
 import { RecordDetails } from "./RecordDetails";
 import { RecordForm } from "./RecordForm";
-import type { CrudModule } from "./types";
+import type { CrudModule, FilterDef } from "./types";
 
 /** عدد الصفوف في الصفحة الواحدة لكل القوائم. */
 const PER_PAGE = 20;
+
+/**
+ * خيارات الفلاتر المنسدلة: الثابتة كما هي، والمجلوبة من الخادم بالمصدر نفسه الذي يستعمله النموذج،
+ * فيتشارك الكاش معه ولا تُجلب الخيارات مرتين. الفلتر المجلوب يبقى بلا خيارات حتى يصل الرد.
+ */
+function useFilterOptions(filters: FilterDef[]): Record<string, Option[]> {
+  const sourced = filters.flatMap((filter) =>
+    filter.kind !== "date" && !Array.isArray(filter.options) ? [{ key: filter.key, source: filter.options }] : [],
+  );
+
+  const results = useQueries({
+    queries: sourced.map(({ source }) => ({
+      queryKey: ["options", source.cacheKey],
+      queryFn: ({ signal }: { signal: AbortSignal }) => source.load(signal),
+      staleTime: 60_000,
+    })),
+  });
+
+  const resolved: Record<string, Option[]> = {};
+  for (const filter of filters) {
+    if (filter.kind !== "date" && Array.isArray(filter.options)) resolved[filter.key] = filter.options;
+  }
+  sourced.forEach(({ key }, index) => {
+    resolved[key] = results[index]?.data ?? [];
+  });
+  return resolved;
+}
 
 type Active<T> =
   | { kind: "create" }
@@ -46,10 +73,11 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
 
   const can = (name: string | undefined) => !!name && permissions.has(name);
   const canCreate = !module.readOnly && !!module.api.create && can(module.permissions.create);
-  const canEdit = !module.readOnly && !!module.api.update && can(module.permissions.update);
+  const canShow = can(module.permissions.show ?? module.permissions.index);
+  // التعديل يحمّل السجل كاملاً بصلاحية العرض، فلا يظهر إلا لمن يملكها مع صلاحية التعديل.
+  const canEdit = !module.readOnly && !!module.api.update && can(module.permissions.update) && canShow;
   const canDelete =
     !module.readOnly && !!module.api.remove && (module.permissions.delete ?? []).some((name) => can(name));
-  const canShow = can(module.permissions.show ?? module.permissions.index);
   const hasActions = canShow || canEdit || canDelete || !!module.rowActions;
 
   // الفلاتر الفارغة لا تُرسل، فالخادم يعامل الغياب كـ«الكل».
@@ -78,6 +106,7 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
   });
 
   const rows = list.data?.items ?? [];
+  const filterOptions = useFilterOptions(module.filters ?? []);
   const close = () => setActive(null);
 
   // أزرار الصف بمصدر واحد، وتظهر بشكلين: أيقونات في الجدول، وأزرار بنص في الكرت.
@@ -167,7 +196,9 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
     const value = filterValues[filter.key];
     if (!value) return [];
     const shown =
-      filter.kind === "date" ? value : (filter.options.find((option) => String(option.value) === value)?.label ?? value);
+      filter.kind === "date"
+        ? value
+        : ((filterOptions[filter.key] ?? []).find((option) => String(option.value) === value)?.label ?? value);
     return [
       {
         key: filter.key,
@@ -233,7 +264,7 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
               ) : (
                 <SelectField
                   label={filter.label}
-                  options={filter.options}
+                  options={filterOptions[filter.key] ?? []}
                   placeholder={t("crud.allValues")}
                   value={filterValues[filter.key] ?? null}
                   onChange={(value) => {
