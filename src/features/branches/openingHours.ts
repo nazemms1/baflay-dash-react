@@ -51,6 +51,12 @@ export function hoursIssues(hours: Hours, holidays: readonly WeekDay[]): Record<
   return issues;
 }
 
+/**
+ * الفترة تتجاوز منتصف الليل حين يسبق وقت إغلاقها وقت فتحها، فتنتهي في اليوم التالي. مثل فتح
+ * ١٠ مساءً وإغلاق ٢ صباحاً. أما `24:00` فتنتهي في اليوم نفسه دائماً.
+ */
+export const closesNextDay = (period: Period): boolean => period.closes < period.opens;
+
 /** هل اليوم مفتوح طوال اليوم، بفترة واحدة من 00:00 إلى 24:00؟ */
 export const isFullDay = (periods: readonly Period[]): boolean =>
   periods.length === 1 && periods[0].opens === FULL_DAY.opens && periods[0].closes === FULL_DAY.closes;

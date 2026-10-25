@@ -7,6 +7,7 @@ import { Copy, Download, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { SelectField, TextArea, Toggle } from "@/components/ui/Fields";
+import { DateField, DateTimeField } from "@/components/ui/DateTimeFields";
 import { currentLanguage } from "@/i18n";
 import { toApiError } from "@/lib/http/errors";
 import { formatDateTime } from "@/lib/format";
@@ -43,7 +44,7 @@ const str = (value: unknown) => (typeof value === "string" ? value : value == nu
 /** المواصفة ترسل الوقت بست خانات كسرية، وبعض المتصفحات لا تقرؤها، فنُبقي ثلاثاً منها. */
 const parseIso = (value: string) => new Date(value.replace(/(\.\d{3})\d+/, "$1"));
 
-/** وقت UTC من الخادم إلى حقل `datetime-local` بالتوقيت المحلي للمستخدم. */
+/** وقت UTC من الخادم إلى حقل التاريخ والوقت، بالتوقيت المحلي للمستخدم. */
 function toLocalInput(value: unknown): string {
   const text = str(value);
   const date = text ? parseIso(text) : null;
@@ -52,7 +53,7 @@ function toLocalInput(value: unknown): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** من حقل `datetime-local` إلى UTC كما تطلبه المواصفة، والفارغ يعني بلا تاريخ انتهاء. */
+/** من حقل التاريخ والوقت إلى UTC كما تطلبه المواصفة، والفارغ يعني بلا تاريخ انتهاء. */
 const toUtcIso = (local: string) => (local ? new Date(local).toISOString() : null);
 
 /** انتهى وقت الإغلاق، فيظهر الاستبيان مغلقاً حتى لو كان الرابط مفعّلاً. */
@@ -226,8 +227,8 @@ export function SurveyTemplateForm({ record, onDone }: FormProps<Named>) {
           onChange={(e) => setHeader({ ...header, description: e.target.value })} />
         <TextArea label={`${t("crud.field.description")} · ${t("crud.arabic")}`} dir="rtl" value={header.description_ar}
           onChange={(e) => setHeader({ ...header, description_ar: e.target.value })} />
-        <Input label={t("surveys.form.date")} type="date" value={header.date}
-          onChange={(e) => setHeader({ ...header, date: e.target.value })} />
+        <DateField label={t("surveys.form.date")} value={header.date}
+          onChange={(date) => setHeader({ ...header, date })} />
         <SelectField label={t("surveys.form.country")} options={countryOptions.data ?? []}
           value={header.country_id} placeholder={t("crud.choose")}
           onChange={(value) => setHeader({ ...header, country_id: value === null ? null : Number(value) })} />
@@ -248,8 +249,8 @@ export function SurveyTemplateForm({ record, onDone }: FormProps<Named>) {
             <p className="text-xs text-muted">{t("surveys.form.share.slugHint")}</p>
           </div>
           <div className="space-y-2">
-            <Input label={t("surveys.form.share.closesAt")} type="datetime-local" dir="ltr" value={header.closes_at}
-              onChange={(e) => setHeader({ ...header, closes_at: e.target.value })} error={fieldErrors.closes_at || null} />
+            <DateTimeField label={t("surveys.form.share.closesAt")} value={header.closes_at}
+              onChange={(closesAt) => setHeader({ ...header, closes_at: closesAt })} error={fieldErrors.closes_at || null} />
             <p className="text-xs text-muted">{t("surveys.form.share.closesAtHint")}</p>
           </div>
         </div>

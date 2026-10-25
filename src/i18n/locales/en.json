@@ -895,6 +895,8 @@
       "restore": "Restore",
       "order": "Sort order",
       "availability": "Availability",
+      "payment": "Payment",
+      "methods": "Methods",
       "invoice": "Invoice",
       "alerts": "Alerts",
       "queue": "Queue",
@@ -971,6 +973,16 @@
     "keepOne": "At least one order type must stay open. To stop everything, close the branch.",
     "lastType": "This is the last order type still open. To stop everything, close the branch."
   },
+  "paymentMethods": {
+    "cash": "Cash payment",
+    "card": "Card payment",
+    "accepted": "Accepted",
+    "notAccepted": "Not accepted",
+    "saved": "Payment methods saved",
+    "keepOne": "At least one payment method must stay enabled.",
+    "lastMethod": "This is the last payment method still enabled, so it can't be turned off.",
+    "noCardAccount": "This branch has no online account, so card payment isn't available."
+  },
   "branchStatus": {
     "column": "Status now",
     "open": "Open",
@@ -979,17 +991,26 @@
     "opensAt": "Opens at {{time}}",
     "hidden": "Hidden"
   },
+  "clock": {
+    "day": "Day",
+    "month": "Month",
+    "year": "Year",
+    "hour": "Hour",
+    "minute": "Minute",
+    "period": "Period"
+  },
   "openingHours": {
     "open": "Hours and holidays",
     "title": "Hours for {{name}}",
-    "hint": "The branch is open every day by default. Set the hours for each open day (up to three periods), and tick Day off for a closed day. Nothing is saved until you press Save.",
+    "hint": "The branch is open every day by default. Set the hours for each open day (up to three periods), and tick Day off for a closed day. A period whose closing time is earlier than its opening time ends the next day. Nothing is saved until you press Save.",
     "from": "From",
     "to": "To",
     "addPeriod": "Add period",
     "removePeriod": "Remove period",
     "holiday": "Day off",
     "closedToday": "The branch is closed this day",
-    "invalidTime": "Use HH:MM in 24-hour format",
+    "invalidTime": "Choose the full opening and closing time",
+    "nextDay": "Ends the next day",
     "sameTime": "Opening and closing times cannot be the same",
     "clearHolidays": "Clear days off",
     "allHoliday": "All days cannot be days off.",
@@ -1141,7 +1162,6 @@
       "none": "No driver",
       "noDrivers": "No drivers in this branch.",
       "needsDriver": "Awaiting driver",
-      "otherBranch": "Other branch",
       "change": "Change driver",
       "assign": "Assign driver"
     },

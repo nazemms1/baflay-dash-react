@@ -58,6 +58,13 @@ check("بيفتح وبيسكّر بنفس الدقيقة مرفوض", () => {
   assert.equal(hours.periodIssue({ opens: "10:00", closes: "10:00" }), "sameTime");
 });
 
+check("الفترة التي تُغلق قبل أن تُفتح تنتهي في اليوم التالي، و24:00 لا تنتهي غداً", () => {
+  assert.equal(hours.closesNextDay(SATURDAY[0]), true);
+  assert.equal(hours.closesNextDay({ opens: "00:00", closes: "04:00" }), false);
+  assert.equal(hours.closesNextDay({ opens: "22:00", closes: "24:00" }), false);
+  assert.equal(hours.closesNextDay({ opens: "12:00", closes: "15:00" }), false);
+});
+
 check("مشاكل الفترات تُعلَّم بمفتاح اليوم ورقم الفترة، ولا تُفحص الأيام المعطّلة", () => {
   const current = withHours({ monday: [{ opens: "10:00", closes: "12:00" }, { opens: "13:00", closes: "13:00" }] });
   assert.deepEqual(hours.hoursIssues(current, []), { "monday.1": "sameTime" });

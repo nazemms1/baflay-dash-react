@@ -46,10 +46,11 @@ export function CrudPage<T extends { id: number | string }>({ module }: { module
 
   const can = (name: string | undefined) => !!name && permissions.has(name);
   const canCreate = !module.readOnly && !!module.api.create && can(module.permissions.create);
-  const canEdit = !module.readOnly && !!module.api.update && can(module.permissions.update);
+  const canShow = can(module.permissions.show ?? module.permissions.index);
+  // التعديل يحمّل السجل كاملاً بصلاحية العرض، فلا يظهر إلا لمن يملكها مع صلاحية التعديل.
+  const canEdit = !module.readOnly && !!module.api.update && can(module.permissions.update) && canShow;
   const canDelete =
     !module.readOnly && !!module.api.remove && (module.permissions.delete ?? []).some((name) => can(name));
-  const canShow = can(module.permissions.show ?? module.permissions.index);
   const hasActions = canShow || canEdit || canDelete || !!module.rowActions;
 
   // الفلاتر الفارغة لا تُرسل، فالخادم يعامل الغياب كـ«الكل».

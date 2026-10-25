@@ -8,7 +8,8 @@ import { Select } from "./Select";
 const CONTROL =
   "w-full rounded-xl border bg-surface px-3.5 text-[15px] text-ink outline-none transition placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary/20";
 
-function FieldShell({
+/** الغلاف المشترك للحقول: التسمية، والخطأ تحت الحقل، وأي عناصر إدخال داخله. */
+export function FieldShell({
   label,
   htmlFor,
   error,

@@ -10,7 +10,7 @@ import { driverSource } from "@/features/drivers/driverSource";
 import { asRecord, toNullableNumber, toNumber, toText } from "@/lib/coerce";
 import { orderAdmin, type Named } from "@/services";
 
-/** نافذة إسناد سائق لطلب توصيل، أو سحبه منه. تبحث بين السائقين على الخادم، وتعلّم سائق الفرع الآخر. */
+/** نافذة إسناد سائق لطلب توصيل، أو سحبه منه. تبحث بين سائقي فرع الطلب على الخادم فقط. */
 export function AssignDriverDialog({ row, onClose }: { row: Named; onClose: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -19,7 +19,7 @@ export function AssignDriverDialog({ row, onClose }: { row: Named; onClose: () =
   const [choice, setChoice] = useState<number | null>(currentId);
   // الاسم يُعرض من الطلب نفسه، فلا يُطلب السائق من الخادم إلا إذا اختير غيره.
   const [choiceLabel, setChoiceLabel] = useState(toText(asRecord(row.driver).name));
-  const source = useMemo(() => driverSource(branchId, t("drivers.assign.otherBranch")), [branchId, t]);
+  const source = useMemo(() => driverSource(branchId), [branchId]);
 
   const save = useMutation({
     mutationFn: (driverId: number | null) => orderAdmin.assignDriver(toNumber(row.id), driverId),
