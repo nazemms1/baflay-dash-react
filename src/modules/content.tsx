@@ -1,11 +1,32 @@
 import type { TFunction } from "i18next";
 import type { CrudModule } from "@/components/crud/types";
 import { localizedRecord } from "@/lib/localized";
+import type { Option } from "@/components/ui/Fields";
+import { GENERAL_MARKET, marketOptions } from "@/features/markets/marketOptions";
 import { galleries, ingredients, type Named } from "@/services";
 import { nameColumn, textColumn } from "./shared";
 import { ingredientsModule } from "./catalog";
 
 const DELETE = ["destroy", "delete"] as const;
+
+/** شكل المعرض يحدده حقل `layout` وحده، لا اسمه بأي لغة. */
+const GALLERY_LAYOUTS = ["offer", "instagram", "events", "standard"] as const;
+
+/** رمز السوق كما يعيده الخادم، أو `null` لمعرض مشترك. */
+const marketCodeOf = (gallery: Named): string | null =>
+  typeof gallery.market_code === "string" && gallery.market_code !== "" ? gallery.market_code : null;
+
+/**
+ * الخادم يعيد `market_code`، والنموذج والتفاصيل يقرآن `market` كما يُرسل. المعرض المشترك يصير
+ * `general`، وهكذا يظهر في القائمة المنسدلة وتعرف الحفظ بالقيمة نفسها.
+ */
+const withMarketField = (gallery: Named): Named => ({
+  ...gallery,
+  market: marketCodeOf(gallery) ?? GENERAL_MARKET,
+});
+
+const layoutOptions = (t: TFunction): Option[] =>
+  GALLERY_LAYOUTS.map((layout) => ({ value: layout, label: t(`galleries.layouts.${layout}`) }));
 
 /**
  * المعارض: اسم ووصف بلغتين، وصور متعددة لكل معرض، ولكل صورة رابط انستغرام
@@ -16,7 +37,7 @@ export const galleriesModule = (t: TFunction): CrudModule<Named> => ({
   titleKey: "nav.galleries",
   api: {
     list: galleries.list,
-    get: galleries.get,
+    get: async (id, signal) => withMarketField(await galleries.get(id, signal)),
     create: galleries.create,
     update: galleries.update,
     remove: galleries.remove,
@@ -25,6 +46,14 @@ export const galleriesModule = (t: TFunction): CrudModule<Named> => ({
   fields: [
     { kind: "bilingual", key: "name", label: t("crud.field.name"), required: true },
     { kind: "bilingual", key: "description", label: t("crud.field.description"), multiline: true },
+    {
+      kind: "select",
+      key: "market",
+      label: t("markets.market"),
+      options: marketOptions(t, { includeGeneral: true }),
+      required: true,
+    },
+    { kind: "select", key: "layout", label: t("galleries.layout"), options: layoutOptions(t), required: true },
     {
       kind: "rows",
       key: "images",
@@ -53,6 +82,14 @@ export const galleriesModule = (t: TFunction): CrudModule<Named> => ({
       },
     },
     nameColumn<Named>(),
+    textColumn<Named>("market_code", t("markets.market"), (row) => (
+      <span className="text-ink-soft">{marketCodeOf(row) ?? t("markets.generalShort")}</span>
+    )),
+    textColumn<Named>("layout", t("galleries.layout"), (row) => {
+      const layout = typeof row.layout === "string" ? row.layout : "";
+      const known = (GALLERY_LAYOUTS as readonly string[]).includes(layout);
+      return <span className="text-ink-soft">{known ? t(`galleries.layouts.${layout}`) : "—"}</span>;
+    }),
     textColumn<Named>("images", t("crud.field.images"), (row) => {
       const count = Array.isArray((row as Record<string, unknown>).images)
         ? ((row as Record<string, unknown>).images as unknown[]).length
@@ -60,6 +97,7 @@ export const galleriesModule = (t: TFunction): CrudModule<Named> => ({
       return <span className="text-ink-soft tabular-nums">{count}</span>;
     }),
   ],
+  filters: [{ key: "market", label: t("markets.market"), options: marketOptions(t, { includeGeneral: true }) }],
   permissions: {
     index: "galleries.index",
     show: "galleries.show",

@@ -25,8 +25,23 @@ export const countriesModule = (t: TFunction): CrudModule<GeoEntity> => ({
     update: countries.update,
     remove: countries.remove,
   },
-  fields: [{ kind: "bilingual", key: "name", label: t("crud.field.name"), required: true }],
-  columns: [nameColumn<GeoEntity>()],
+  fields: [
+    { kind: "bilingual", key: "name", label: t("crud.field.name"), required: true },
+    { kind: "text", key: "code", label: t("heroSlides.countryCode"), hint: t("heroSlides.countryCodeHint"), required: true, ltr: true },
+    { kind: "text", key: "dial_code", label: t("heroSlides.dialCode"), ltr: true },
+    { kind: "text", key: "currency", label: t("heroSlides.currency"), ltr: true },
+    { kind: "text", key: "default_locale", label: t("heroSlides.defaultLocale"), ltr: true },
+    { kind: "number", key: "sort_order", label: t("crud.field.order"), min: 0 },
+    { kind: "switch", key: "is_active", label: t("heroSlides.countryActive") },
+  ],
+  columns: [
+    nameColumn<GeoEntity>(),
+    {
+      key: "code",
+      header: t("heroSlides.countryCode"),
+      render: (row) => <span className="font-mono text-sm">{String(row.code ?? "—")}</span>,
+    },
+  ],
   permissions: {
     index: "countries.index",
     create: "countries.store",

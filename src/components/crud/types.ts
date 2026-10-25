@@ -201,7 +201,8 @@ export type FilterDef =
       key: string;
       label: string;
       kind?: "select";
-      options: Option[];
+      /** خيارات ثابتة، أو مصدر يجلبها الخادم مرة واحدة، كقائمة الدول. */
+      options: Option[] | OptionSource;
     }
   | {
       key: string;

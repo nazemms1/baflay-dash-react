@@ -50,6 +50,8 @@
     "menus": "Menus",
     "ingredients": "Ingredients",
     "galleries": "Galleries",
+    "heroSlides": "Home hero",
+    "marketContacts": "Contact channels",
     "orders": "Orders",
     "surveyAnswers": "Customer answers",
     "surveyTemplates": "Survey templates",
@@ -282,6 +284,100 @@
       "branches": "View branches",
       "items": "View items",
       "lowRated": "Low-rated orders"
+    }
+  },
+  "heroSlides": {
+    "country": "Country",
+    "noCountries": "No country has a valid code yet (such as SY). Add the country code from the Countries screen first.",
+    "title": "Title",
+    "titleEn": "Title in English",
+    "titleAr": "Title in Arabic",
+    "subtitle": "Subtitle",
+    "subtitleEn": "Subtitle in English",
+    "subtitleAr": "Subtitle in Arabic",
+    "desktopImage": "Desktop image",
+    "mobileImage": "Mobile image",
+    "mobileImageHint": "If no mobile image is uploaded, the desktop image is used.",
+    "status": "Status",
+    "live": "Shown to visitors",
+    "inactive": "Off",
+    "active": "Slide is on",
+    "activeHint": "A slide that is off is never shown to visitors.",
+    "saved": "Slide saved",
+    "orderSaved": "Slide order updated",
+    "orderFailed": "Could not update the order",
+    "countryCode": "Country code",
+    "countryCodeHint": "Two uppercase letters, such as SY",
+    "dialCode": "Dial code",
+    "currency": "Currency",
+    "defaultLocale": "Default language",
+    "countryActive": "Country is live for visitors",
+    "errors": {
+      "desktopRequired": "A desktop image is required for a new slide"
+    }
+  },
+  "markets": {
+    "market": "Market",
+    "general": "Shared (all markets)",
+    "generalShort": "Shared"
+  },
+  "galleries": {
+    "layout": "Layout",
+    "layouts": {
+      "offer": "Offers",
+      "instagram": "Instagram",
+      "events": "Events",
+      "standard": "Standard"
+    }
+  },
+  "marketContacts": {
+    "country": "Country",
+    "noCountries": "No country has a valid code yet (such as SY). Add the country code from the Countries screen first.",
+    "type": "Type",
+    "types": {
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "address": "Address",
+      "working_hours": "Working hours",
+      "social": "Social media"
+    },
+    "platform": "Platform",
+    "platforms": {
+      "facebook": "Facebook",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "x": "X",
+      "youtube": "YouTube",
+      "snapchat": "Snapchat",
+      "telegram": "Telegram",
+      "linkedin": "LinkedIn",
+      "other": "Other"
+    },
+    "labelEn": "Label in English",
+    "labelAr": "Label in Arabic",
+    "value": "Value",
+    "valueAr": "Value in Arabic",
+    "link": "Link",
+    "status": "Status",
+    "live": "Shown to visitors",
+    "inactive": "Hidden",
+    "active": "Shown to visitors",
+    "activeHint": "A hidden contact is not shown on the website.",
+    "saved": "Contact saved",
+    "orderSaved": "Contact order updated",
+    "orderFailed": "Could not update the order",
+    "hints": {
+      "phone": "International number starting with {{dial}}",
+      "phoneAny": "International number starting with the country code",
+      "url": "Full link starting with https://"
+    },
+    "errors": {
+      "phoneStart": "The number must start with + and the country code",
+      "phoneCountry": "The number must start with {{dial}}",
+      "phoneFormat": "Enter a valid international number",
+      "email": "Enter a valid email address",
+      "url": "The link must start with https://"
     }
   },
   "crud": {
@@ -939,6 +1035,8 @@
       "branches": "Branches",
       "categories": "Categories",
       "galleries": "Gallery",
+      "markets": "Countries & home",
+      "hero": "Home hero",
       "users": "Users",
       "roles": "Roles",
       "permissions": "Permissions",
