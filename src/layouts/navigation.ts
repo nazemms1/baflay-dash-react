@@ -8,6 +8,7 @@ import {
   Images,
   LayoutDashboard,
   MapPin,
+  Megaphone,
   MessageSquare,
   MonitorPlay,
   Package,
@@ -62,6 +63,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { key: "galleries", path: "/galleries", icon: Images, permission: "galleries.index" },
       { key: "heroSlides", path: "/hero-slides", icon: MonitorPlay, permission: "markets.hero.slides.index" },
       { key: "marketContacts", path: "/market-contacts", icon: Phone, permission: "markets.contacts.index" },
+      { key: "marketOffers", path: "/market-offers", icon: Megaphone, permission: "markets.offers.index" },
     ],
   },
   {

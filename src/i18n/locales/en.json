@@ -52,6 +52,7 @@
     "galleries": "Galleries",
     "heroSlides": "Home hero",
     "marketContacts": "Contact channels",
+    "marketOffers": "Offers",
     "orders": "Orders",
     "surveyAnswers": "Customer answers",
     "surveyTemplates": "Survey templates",
@@ -378,6 +379,20 @@
       "phoneFormat": "Enter a valid international number",
       "email": "Enter a valid email address",
       "url": "The link must start with https://"
+    }
+  },
+  "marketOffers": {
+    "country": "Country",
+    "noCountries": "No country has a valid code yet (such as SY). Add the country code from the Countries screen first.",
+    "image": "Image",
+    "link": "Link",
+    "linkHint": "Full https:// link, a page on the site such as /menu, or leave it empty.",
+    "saved": "Offer saved",
+    "orderSaved": "Offer order updated",
+    "orderFailed": "Could not update the order",
+    "errors": {
+      "imageRequired": "An image is required for a new offer",
+      "link": "The link must be https://…, a page such as /menu, or empty"
     }
   },
   "crud": {

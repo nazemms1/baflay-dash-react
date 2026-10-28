@@ -139,3 +139,54 @@ export const marketContacts = {
       .then((response) => response.data as unknown);
   },
 };
+
+/** عرض في الواجهة لدولة: صورة إجبارية، ورابط اختياري. الرابط إما `https://...` أو صفحة بالموقع مثل `/menu`، أو فارغ. */
+export interface MarketOffer {
+  id: number;
+  image: string;
+  link: string | null;
+  sort_order: number;
+}
+
+/**
+ * عروض كل دولة. الإضافة والتعديل بالصورة يُرسلان كـ`FormData`، والتعديل بالرابط وحده JSON.
+ * تبديل الصورة يتبع ما يقبله الخادم: `POST` مع `_method=PUT`.
+ */
+export const marketOffers = {
+  /** الخادم يعيد القائمة كاملة، وغلافها قد يكون قائمة مباشرة أو `{ offers: [...] }`. */
+  async list(code: string): Promise<MarketOffer[]> {
+    const { data } = await api.get<unknown>(`/markets/${encodeURIComponent(code)}/offers`);
+    const body = unwrapData<unknown>(data);
+    if (Array.isArray(body)) return body as MarketOffer[];
+    const nested = (body as { offers?: unknown } | null)?.offers;
+    return Array.isArray(nested) ? (nested as MarketOffer[]) : [];
+  },
+
+  create(code: string, payload: FormData): Promise<unknown> {
+    return api
+      .post(`/markets/${encodeURIComponent(code)}/offers`, payload)
+      .then((response) => response.data as unknown);
+  },
+
+  /** تعديل الرابط وحده. الرابط الفارغ يُرسل `null` فيُمسح. */
+  updateLink(id: Id, link: string | null): Promise<unknown> {
+    return api.put(`/offers/${id}`, { link }).then((response) => response.data as unknown);
+  },
+
+  /** تبديل الصورة مع الرابط. */
+  updateWithImage(id: Id, payload: FormData): Promise<unknown> {
+    payload.set("_method", "PUT");
+    return api.post(`/offers/${id}`, payload).then((response) => response.data as unknown);
+  },
+
+  remove(id: Id): Promise<unknown> {
+    return api.delete(`/offers/${id}`).then((response) => response.data as unknown);
+  },
+
+  /** يرسل معرّفات عروض الدولة كلها بالترتيب الجديد. */
+  reorder(code: string, offerIds: number[]): Promise<unknown> {
+    return api
+      .put(`/markets/${encodeURIComponent(code)}/offers/order`, { offer_ids: offerIds })
+      .then((response) => response.data as unknown);
+  },
+};

@@ -34,6 +34,7 @@ import { customerSurveysModule, surveysModule } from "@/modules/surveys";
 import { gameModule } from "@/modules/game";
 import { HeroSlidesPage } from "@/features/hero/HeroSlidesPage";
 import { MarketContactsPage } from "@/features/market-contacts/MarketContactsPage";
+import { MarketOffersPage } from "@/features/market-offers/MarketOffersPage";
 
 /** الوحدات المنقولة بشاشة CRUD كاملة، ومفتاحها مسار الوحدة في القائمة. */
 const CRUD_ROUTES = [
@@ -47,6 +48,7 @@ const CRUD_ROUTES = [
   { path: "galleries", element: <ModuleRoute build={galleriesModule} /> },
   { path: "hero-slides", element: <HeroSlidesPage /> },
   { path: "market-contacts", element: <MarketContactsPage /> },
+  { path: "market-offers", element: <MarketOffersPage /> },
   { path: "users", element: <UsersRoute /> },
   { path: "roles", element: <ModuleRoute build={rolesModule} /> },
   { path: "contact-us", element: <ModuleRoute build={contactUsModule} /> },
