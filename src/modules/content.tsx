@@ -59,11 +59,12 @@ export const galleriesModule = (t: TFunction): CrudModule<Named> => ({
       key: "images",
       requires: "galleries.images.update",
       label: t("crud.field.images"),
+      // المفتاح `image` هو ما يتحقق منه الخادم (`images.*.image`)، فلا يُغيَّر إلى اسم آخر.
       columns: [
-        { key: "file", label: t("crud.field.image"), kind: "image", ratio: null },
+        { key: "image", label: t("crud.field.image"), kind: "image", ratio: null },
         { key: "instagram_url", label: t("crud.field.instagram"), kind: "text" },
       ],
-      newRow: { file: null, instagram_url: "" },
+      newRow: { image: null, instagram_url: "" },
     },
   ],
   columns: [
