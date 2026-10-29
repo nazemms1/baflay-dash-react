@@ -3,7 +3,9 @@ import type { CrudModule } from "@/components/crud/types";
 import { localizedRecord } from "@/lib/localized";
 import type { Option } from "@/components/ui/Fields";
 import { GENERAL_MARKET, marketOptions } from "@/features/markets/marketOptions";
-import { galleries, ingredients, type Named } from "@/services";
+import { galleries, galleryImages, ingredients, type Named } from "@/services";
+import { ApiError } from "@/lib/http/errors";
+import i18n from "@/i18n";
 import { nameColumn, textColumn } from "./shared";
 import { ingredientsModule } from "./catalog";
 
@@ -28,6 +30,69 @@ const withMarketField = (gallery: Named): Named => ({
 const layoutOptions = (t: TFunction): Option[] =>
   GALLERY_LAYOUTS.map((layout) => ({ value: layout, label: t(`galleries.layouts.${layout}`) }));
 
+/** صف صورة كما يرسله النموذج: `images[i][id]`، و`images[i][instagram_url]`، والملف فقط إن اختير ملف جديد. */
+interface ImageRow {
+  id?: number;
+  instagram_url: string;
+  image?: File;
+}
+
+const imageRowsOf = (form: FormData): ImageRow[] => {
+  const rows = new Map<number, Partial<ImageRow>>();
+  form.forEach((value, key) => {
+    const match = /^images\[(\d+)\]\[(id|instagram_url|image)\]$/.exec(key);
+    if (!match) return;
+    const index = Number(match[1]);
+    const row = rows.get(index) ?? {};
+    if (match[2] === "id") row.id = Number(value);
+    else if (match[2] === "instagram_url") row.instagram_url = String(value);
+    else if (value instanceof File) row.image = value;
+    rows.set(index, row);
+  });
+  // An empty link is left out of the form, so a row without one means no link.
+  return [...rows.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([, row]) => ({ id: row.id, instagram_url: row.instagram_url ?? "", image: row.image }));
+};
+
+/**
+ * يحفظ المعرض وصوره. تحديث المعرض على الخادم يتجاهل صفوف الصور، فكل صورة تُحفظ بنقطتها:
+ * رابطها أو ملفها الجديد، والصورة المحذوفة من الصفوف تُحذف. إضافة صورة جديدة إلى معرض قائم
+ * غير ممكنة بعد، لأن الخادم لا يملك نقطة لها، فتظهر رسالة بدل أن تُفقد الصورة بصمت.
+ */
+const saveGallery = async (id: number | string, payload: Record<string, unknown> | FormData) => {
+  if (!(payload instanceof FormData)) return galleries.update(id, payload);
+
+  const rows = imageRowsOf(payload);
+  const saved: (ImageRow & { id: number })[] = [];
+  for (const row of rows) {
+    if (row.id === undefined) throw new ApiError(i18n.t("galleries.errors.addImage"), { status: 422 });
+    saved.push({ ...row, id: row.id });
+  }
+
+  const existing = ((await galleries.get(id)).images ?? []) as { id: number; instagram_url?: string | null }[];
+  const linkOf = new Map(existing.map((image) => [image.id, image.instagram_url ?? ""]));
+  const kept = new Set(saved.map((row) => row.id));
+
+  const fields = new FormData();
+  payload.forEach((value, key) => {
+    if (!key.startsWith("images[")) fields.append(key, value);
+  });
+  await galleries.update(id, fields);
+
+  for (const row of saved) {
+    if (!row.image && row.instagram_url === (linkOf.get(row.id) ?? "")) continue;
+    const form = new FormData();
+    if (row.image) form.append("image", row.image);
+    form.append("instagram_url", row.instagram_url);
+    await galleryImages.updateImage(id, row.id, form);
+  }
+
+  for (const image of existing) {
+    if (!kept.has(image.id)) await galleryImages.remove(id, image.id);
+  }
+};
+
 /**
  * المعارض: اسم ووصف بلغتين، وصور متعددة لكل معرض، ولكل صورة رابط انستغرام
  * اختياري. ترسل كـ `FormData` لأن الصور ملفات.
@@ -39,7 +104,7 @@ export const galleriesModule = (t: TFunction): CrudModule<Named> => ({
     list: galleries.list,
     get: async (id, signal) => withMarketField(await galleries.get(id, signal)),
     create: galleries.create,
-    update: galleries.update,
+    update: saveGallery,
     remove: galleries.remove,
   },
   multipart: true,

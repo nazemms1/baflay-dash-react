@@ -138,4 +138,8 @@ export const galleryImages = {
       .post(`galleries/${galleryId}/images/${imageId}`, form)
       .then((response) => response.data as unknown);
   },
+
+  /** حذف صورة واحدة من المعرض. */
+  remove: (galleryId: Id, imageId: Id) =>
+    api.delete(`galleries/${galleryId}/images/${imageId}`).then((response) => response.data as unknown),
 };

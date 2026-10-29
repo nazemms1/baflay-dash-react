@@ -329,6 +329,9 @@
       "instagram": "Instagram",
       "events": "Events",
       "standard": "Standard"
+    },
+    "errors": {
+      "addImage": "A new image cannot be added to an existing gallery yet. Create a new gallery with its images, or change the link or the picture of an existing image."
     }
   },
   "marketContacts": {
