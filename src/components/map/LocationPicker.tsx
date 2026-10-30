@@ -13,11 +13,16 @@ export interface LatLng {
 interface LocationPickerProps {
   lat: number | null;
   lng: number | null;
-  /** نطاق التوصيل بالكيلومتر، يُرسم دائرةً حول النقطة. */
+  /** نطاق التوصيل بالكيلومتر، يُرسم دائرةً حول النقطة. بدونه لا تُرسم دائرة. */
   radiusKm?: number | null;
   readOnly?: boolean;
   height?: string;
   onChange?: (point: LatLng) => void;
+  /**
+   * وضع تحديد النطاق: النقر يضبط نطاق التوصيل ليساوي المسافة بين النقرة وموقع الفرع،
+   * والعلامة تبقى ثابتة مركزاً للدائرة.
+   */
+  onRadiusChange?: (km: number) => void;
 }
 
 const markerIcon = L.divIcon({
@@ -29,7 +34,8 @@ const markerIcon = L.divIcon({
 
 /**
  * خريطة لتحديد موقع الفرع. النقر يضع العلامة، وسحبها يعدّل الموقع، والدائرة
- * تُظهر نطاق التوصيل وتتحدث مع الرقم مباشرة. في وضع القراءة تبقى الخريطة
+ * تُظهر نطاق التوصيل إن مُرِّر، وتتحدث مع الرقم مباشرة. مع `onRadiusChange`
+ * يصير النقر تحديداً للنطاق بدلاً من الموقع. في وضع القراءة تبقى الخريطة
  * للعرض فقط.
  */
 export function LocationPicker({
@@ -39,7 +45,9 @@ export function LocationPicker({
   readOnly = false,
   height = "18rem",
   onChange,
+  onRadiusChange,
 }: LocationPickerProps) {
+  const pickingRadius = onRadiusChange !== undefined;
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -50,8 +58,10 @@ export function LocationPicker({
 
   // الاستدعاء يُحدَّث دون إعادة إنشاء الخريطة، فلا تتعلّق الأحداث بقيمة قديمة.
   const onChangeRef = useRef(onChange);
+  const onRadiusChangeRef = useRef(onRadiusChange);
   useEffect(() => {
     onChangeRef.current = onChange;
+    onRadiusChangeRef.current = onRadiusChange;
   });
 
   // إنشاء الخريطة مرة واحدة، وتدميرها عند الخروج.
@@ -74,7 +84,15 @@ export function LocationPicker({
     }).addTo(map);
 
     if (!readOnly) {
-      map.on("click", (event) => onChangeRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng }));
+      map.on("click", (event) => {
+        if (onRadiusChangeRef.current) {
+          // المسافة من العلامة، أي موقع الفرع، إلى النقرة هي النطاق الجديد، والمسافة بالمتر فنحوّلها إلى كيلومتر.
+          const center = markerRef.current?.getLatLng();
+          if (center) onRadiusChangeRef.current(center.distanceTo(event.latlng) / 1000);
+          return;
+        }
+        onChangeRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng });
+      });
     }
 
     mapRef.current = map;
@@ -116,10 +134,11 @@ export function LocationPicker({
     }
 
     const point = L.latLng(lat, lng);
-    const radiusMeters = Math.max(0, Number(radiusKm ?? 0) * 1000);
+    // في وضع النطاق تبقى العلامة ثابتة مركزاً للدائرة، فلا تُسحب ولا تستقبل النقر.
+    const movable = !readOnly && !pickingRadius;
 
     if (!markerRef.current) {
-      const marker = L.marker(point, { icon: markerIcon, draggable: !readOnly, interactive: !readOnly }).addTo(map);
+      const marker = L.marker(point, { icon: markerIcon, draggable: movable, interactive: movable }).addTo(map);
       marker.on("dragend", () => {
         const moved = marker.getLatLng();
         onChangeRef.current?.({ lat: moved.lat, lng: moved.lng });
@@ -129,7 +148,12 @@ export function LocationPicker({
       markerRef.current.setLatLng(point);
     }
 
-    if (!circleRef.current) {
+    // الدائرة تُرسم فقط حين يُمرَّر نطاق، فالخريطة التي تحدد الموقع وحده تبقى بلا دائرة.
+    const radiusMeters = radiusKm === null || radiusKm === undefined ? null : Math.max(0, radiusKm * 1000);
+    if (radiusMeters === null) {
+      circleRef.current?.remove();
+      circleRef.current = null;
+    } else if (!circleRef.current) {
       circleRef.current = L.circle(point, {
         radius: radiusMeters,
         color: "#bf3c3c",
@@ -143,15 +167,15 @@ export function LocationPicker({
       circleRef.current.setRadius(radiusMeters);
     }
 
-    // أول مرة يظهر فيها موقع محفوظ: نركّز الخريطة على الدائرة كلها، بشرط أن تكون الحاوية ظاهرة.
-    boundsRef.current = circleRef.current.getBounds();
+    // أول مرة يظهر فيها موقع محفوظ: نركّز الخريطة على الدائرة كلها إن وُجدت، أو على الموقع، بشرط أن تكون الحاوية ظاهرة.
+    boundsRef.current = circleRef.current?.getBounds() ?? L.latLngBounds([point]);
     const container = containerRef.current;
     if (!centeredRef.current && container && container.clientWidth > 0) {
       map.invalidateSize();
       map.fitBounds(boundsRef.current, { padding: [24, 24], maxZoom: 15 });
       centeredRef.current = true;
     }
-  }, [lat, lng, radiusKm, readOnly]);
+  }, [lat, lng, radiusKm, readOnly, pickingRadius]);
 
   return (
     <div

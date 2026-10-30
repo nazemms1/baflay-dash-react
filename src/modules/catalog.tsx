@@ -166,7 +166,6 @@ export const branchesModule = (t: TFunction): CrudModule<Named> => {
       lngKey: "location_y",
       radiusKey: "delivery_radius_km",
       label: t("crud.field.deliveryArea"),
-      group: t("crud.group.location"),
     },
     { kind: "number", key: "delivery_fee", label: t("crud.field.deliveryFee"), group: t("crud.group.delivery"), min: 0 },
     { kind: "number", key: "delivery_price_per_km", label: t("crud.field.deliveryPricePerKm"), group: t("crud.group.delivery"), min: 0, max: 1000000 },

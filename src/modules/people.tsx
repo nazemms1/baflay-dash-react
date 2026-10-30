@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { CrudModule, OptionSource } from "@/components/crud/types";
+import type { CrudModule, ListQuery, OptionSource } from "@/components/crud/types";
 import { permissionGroupOf, permissionLabel } from "@/components/crud/permissionLabels";
 import { DRIVER_ROLE } from "@/features/drivers/permissions";
 import { branches, contactUs, listAll, permissionCatalog, roles, users, type Named } from "@/services";
@@ -13,18 +13,51 @@ import { remoteSource, textColumn } from "./shared";
 
 const DELETE = ["destroy", "delete"] as const;
 
+/** الحسابات كلها، أو الموظفون (`true`) وغيرهم (`false`): المعرّف والعنوان لكل شاشة. */
+const usersView = (staff?: boolean) => {
+  if (staff === undefined) return { id: "users", titleKey: "nav.users" };
+  return staff
+    ? { id: "users-staff", titleKey: "nav.staffUsers" }
+    : { id: "users-non-staff", titleKey: "nav.nonStaffUsers" };
+};
+
+/**
+ * القائمة كما هي، أو الحسابات كلها مُصفّاة بحقل `is_staff` في الواجهة ثم مُرقّمة هنا. الخادم
+ * لا يستقبل الفلتر، فنجلب كل الصفحات أولاً ليكون الترقيم صحيحاً على القائمة المصفّاة.
+ */
+const usersList = (staff?: boolean) =>
+  staff === undefined
+    ? users.list
+    : async ({ page, per_page, ...filters }: ListQuery, signal: AbortSignal) => {
+        const everyone = await listAll<Named>(
+          (query, pageSignal) => users.list({ ...filters, ...query }, pageSignal),
+          signal
+        );
+        const matching = everyone.filter((row) => Boolean((row as Record<string, unknown>).is_staff) === staff);
+        return {
+          items: matching.slice((page - 1) * per_page, page * per_page),
+          meta: {
+            total: matching.length,
+            currentPage: page,
+            lastPage: Math.max(1, Math.ceil(matching.length / per_page)),
+            perPage: per_page,
+          },
+        };
+      };
+
 /**
  * المستخدمون: كلمة المرور مطلوبة عند الإنشاء ومعطّلة إلا عند الكتابة عند
  * التعديل. الحقلان يحملان المفتاح نفسه، ويظهر أحدهما حسب الوضع.
  *
  * مدير الفرع لا يرسل الفرع: الخادم يضع المستخدم الجديد في فرع مديره، ويرفض أي فرع آخر
  * بـ `outside_your_branch`، فيُخفى حقل الفرع عنه كلياً ولا يرسل قيمته.
+ *
+ * `staff` يحدد الشاشة: الموظفون (`true`) أو غيرهم (`false`)، وبدونه تظهر كل الحسابات.
  */
-export const usersModule = (t: TFunction, scoped = false): CrudModule<Named> => ({
-  id: "users",
-  titleKey: "nav.users",
+export const usersModule = (t: TFunction, scoped = false, staff?: boolean): CrudModule<Named> => ({
+  ...usersView(staff),
   api: {
-    list: users.list,
+    list: usersList(staff),
     get: users.get,
     create: users.create,
     update: users.update,

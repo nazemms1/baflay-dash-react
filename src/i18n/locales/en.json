@@ -58,6 +58,9 @@
     "surveyTemplates": "Survey templates",
     "contactUs": "Contact us",
     "users": "Users",
+    "staffUsers": "Team",
+    "nonStaffUsers": "Customers",
+    "toggleChildren": "Show or hide sub-pages",
     "roles": "Roles",
     "countries": "Countries",
     "cities": "Cities",
@@ -498,7 +501,11 @@
       "general": "General"
     },
     "location": {
-      "hint": "Click the map to set the branch location, or drag the marker to adjust it. The circle shows the delivery area.",
+      "hint": "Click the map to set the location, or drag the marker to adjust it.",
+      "pointTitle": "Location on the map",
+      "radiusTitle": "Delivery area on the map",
+      "radiusHint": "Click the map to set the delivery radius. The distance from the branch to the point you click becomes the radius. Use the slider for fine adjustment.",
+      "radiusNeedsPoint": "Set the location first, then choose the delivery radius.",
       "clear": "Clear location",
       "radius": "Delivery radius",
       "km": "km",

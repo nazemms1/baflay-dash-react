@@ -2,7 +2,7 @@ import { Suspense, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
-import { LogOut, Menu, X } from "lucide-react";
+import { ChevronDown, LogOut, Menu, X } from "lucide-react";
 import { useBranchScope, usePermissions } from "@/features/auth/hooks";
 import { useSession } from "@/features/auth/session-store";
 import { currentLanguage } from "@/i18n";
@@ -12,7 +12,7 @@ import { LanguageSwitch } from "@/components/ui/LanguageSwitch";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { RouteProgress } from "@/components/ui/RouteProgress";
 import { InstallAppButton } from "@/features/pwa/InstallAppButton";
-import { canSeeItem, NAV_GROUPS } from "./navigation";
+import { canSeeItem, NAV_GROUPS, type NavItem, type PermissionCheck } from "./navigation";
 
 export function AppShell() {
   const { t } = useTranslation();
@@ -103,24 +103,7 @@ function Sidebar({
               </p>
               <ul className="space-y-1">
                 {visible.map((item) => (
-                  <li key={item.path}>
-                    <NavLink
-                      to={item.path}
-                      end={item.path === "/"}
-                      onClick={onNavigate}
-                      className={({ isActive }) =>
-                        clsx(
-                          "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
-                          isActive
-                            ? "bg-primary font-semibold text-ink shadow-sm"
-                            : "text-surface/75 hover:bg-night-soft hover:text-surface"
-                        )
-                      }
-                    >
-                      <item.icon className="size-4.5 shrink-0" aria-hidden />
-                      {t(`nav.${item.key}`)}
-                    </NavLink>
-                  </li>
+                  <NavEntry key={item.path} item={item} permissions={permissions} onNavigate={onNavigate} />
                 ))}
               </ul>
             </div>
@@ -140,6 +123,90 @@ function Sidebar({
         v{APP_VERSION} · {APP_BUILD_DATE} · {APP_COMMIT}
       </footer>
     </aside>
+  );
+}
+
+/**
+ * بند في القائمة الجانبية. البند الذي له فروع يُطوى ويُفتح بزر السهم، ويفتح تلقائياً
+ * حين تكون الشاشة الحالية داخل أحد فروعه.
+ */
+function NavEntry({
+  item,
+  permissions,
+  onNavigate,
+}: {
+  item: NavItem;
+  permissions: PermissionCheck;
+  onNavigate: () => void;
+}) {
+  const { t } = useTranslation();
+  const location = useLocation();
+  const children = (item.children ?? []).filter((child) => canSeeItem(child, permissions));
+  const hasChildren = children.length > 0;
+  const [expanded, setExpanded] = useState(() =>
+    children.some((child) => location.pathname.startsWith(child.path))
+  );
+
+  return (
+    <li>
+      <div className="flex items-center gap-1">
+        <NavRow item={item} end={item.path === "/" || hasChildren} onNavigate={onNavigate} className="flex-1" />
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={() => setExpanded((open) => !open)}
+            aria-expanded={expanded}
+            aria-label={t("nav.toggleChildren")}
+            className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg text-surface/60 hover:bg-night-soft hover:text-surface"
+          >
+            <ChevronDown className={clsx("size-4 transition-transform", expanded && "rotate-180")} aria-hidden />
+          </button>
+        )}
+      </div>
+
+      {hasChildren && expanded && (
+        <ul className="ms-5 mt-1 space-y-1 border-s border-night-line ps-3">
+          {children.map((child) => (
+            <li key={child.path}>
+              <NavRow item={child} onNavigate={onNavigate} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+function NavRow({
+  item,
+  end = false,
+  className,
+  onNavigate,
+}: {
+  item: NavItem;
+  end?: boolean;
+  className?: string;
+  onNavigate: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <NavLink
+      to={item.path}
+      end={end}
+      onClick={onNavigate}
+      className={({ isActive }) =>
+        clsx(
+          "flex min-w-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
+          isActive
+            ? "bg-primary font-semibold text-ink shadow-sm"
+            : "text-surface/75 hover:bg-night-soft hover:text-surface",
+          className
+        )
+      }
+    >
+      <item.icon className="size-4.5 shrink-0" aria-hidden />
+      {t(`nav.${item.key}`)}
+    </NavLink>
   );
 }
 

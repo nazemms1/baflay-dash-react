@@ -19,6 +19,8 @@ import {
   ShoppingCart,
   Store,
   Tags,
+  User,
+  UserCog,
   Users,
   Wallet,
   type LucideIcon,
@@ -38,6 +40,8 @@ export interface NavItem {
   icon: LucideIcon;
   permission?: string;
   prefix?: string;
+  /** فروع البند تظهر تحته مطوية، كـ«العملاء» و«الفريق» تحت «المستخدمون». */
+  children?: NavItem[];
 }
 
 export interface NavGroup {
@@ -87,7 +91,16 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     key: "admin",
     items: [
-      { key: "users", path: "/users", icon: Users, permission: "users.index" },
+      {
+        key: "users",
+        path: "/users",
+        icon: Users,
+        permission: "users.index",
+        children: [
+          { key: "nonStaffUsers", path: "/users/non-staff", icon: User, permission: "users.index" },
+          { key: "staffUsers", path: "/users/staff", icon: UserCog, permission: "users.index" },
+        ],
+      },
       { key: "roles", path: "/roles", icon: ShieldCheck, permission: "roles.show" },
       { key: "countries", path: "/countries", icon: Globe, permission: "countries.index" },
       { key: "cities", path: "/cities", icon: MapPin, permission: "cities.index" },

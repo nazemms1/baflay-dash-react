@@ -70,6 +70,8 @@ export const marketOffersModule = (t: TFunction, scope: CountryScope): CrudModul
       update: "markets.offers.update",
       delete: ["markets.offers.destroy"],
     },
+    // التعديل والحذف يظهران لكل من يرى الصفحة، والخادم يرفض ما لا تملك صلاحيته.
+    showWithoutPermission: ["update", "delete"],
     nameOf: (row) => row.link || `#${row.id}`,
     form: makeOfferForm(scope.code, moduleId),
     details: OfferDetails,

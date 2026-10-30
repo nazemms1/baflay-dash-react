@@ -555,22 +555,22 @@ export function RecordForm<T extends { id: number | string }>({
             error={error}
           />
         );
-      case "location":
+      case "location": {
+        const radiusKey = field.radiusKey;
         return (
           <LocationField
             label={field.label}
             lat={(values[field.key] as number | null) ?? null}
             lng={(values[field.lngKey] as number | null) ?? null}
-            radius={field.radiusKey ? Number(values[field.radiusKey]) || null : null}
+            radius={radiusKey ? Number(values[radiusKey]) || null : null}
             onChange={(point) =>
               setMany({ [field.key]: point?.lat ?? null, [field.lngKey]: point?.lng ?? null })
             }
-            onRadiusChange={(km) => {
-              if (field.radiusKey) set(field.radiusKey, km);
-            }}
+            onRadiusChange={radiusKey ? (km) => set(radiusKey, km) : undefined}
             error={error}
           />
         );
+      }
       case "rows":
         return (
           <RowsField

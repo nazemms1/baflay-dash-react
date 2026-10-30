@@ -50,6 +50,8 @@ const CRUD_ROUTES = [
   { path: "market-contacts", element: <MarketContactsPage /> },
   { path: "market-offers", element: <MarketOffersPage /> },
   { path: "users", element: <UsersRoute /> },
+  { path: "users/staff", element: <UsersRoute staff /> },
+  { path: "users/non-staff", element: <UsersRoute staff={false} /> },
   { path: "roles", element: <ModuleRoute build={rolesModule} /> },
   { path: "contact-us", element: <ModuleRoute build={contactUsModule} /> },
   { path: "survey-templates", element: <ModuleRoute build={surveysModule} /> },
