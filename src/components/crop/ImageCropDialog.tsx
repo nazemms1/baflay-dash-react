@@ -47,6 +47,11 @@ function readableUrl(url: string): string {
   return url;
 }
 
+/** معرّف في الرابط يجعل الخادم يخدم نسخة الصورة الحالية، لا نسخة محفوظة سابقاً بلا ترويسة CORS. */
+function withCorsQuery(url: string): string {
+  return `${url}${url.includes("?") ? "&" : "?"}cors=1`;
+}
+
 /**
  * نافذة قص الصورة: تُفتح بملف محلي اختاره المستخدم للتو، أو بصورة محفوظة في الخادم فتُقص من
  * جديد. يحرّك المستخدم الصورة داخل إطار بنسبة محددة، ويكبّرها، ويرى معاينة النتيجة الفعلية،
@@ -58,6 +63,7 @@ export function ImageCropDialog({
   defaultRatio,
   onCancel,
   onConfirm,
+  onPickFile,
 }: {
   /** ملف محلي. يُعطى هذا أو `url`. */
   file?: File;
@@ -66,6 +72,8 @@ export function ImageCropDialog({
   defaultRatio: number | null;
   onCancel: () => void;
   onConfirm: (cropped: File) => void;
+  /** يُعرض عند تعذّر قراءة صورة الخادم، فيختار المستخدم الملف الأصلي من جهازه. */
+  onPickFile?: () => void;
 }) {
   const { t } = useTranslation();
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -99,7 +107,7 @@ export function ImageCropDialog({
     loaded.onerror = () => {
       if (alive) setFailed(true);
     };
-    loaded.src = objectUrl ?? (url ? readableUrl(url) : "");
+    loaded.src = objectUrl ?? (url ? withCorsQuery(readableUrl(url)) : "");
     return () => {
       alive = false;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -233,8 +241,13 @@ export function ImageCropDialog({
                 }}
               />
               {!image && (
-                <div className="absolute inset-0 grid place-items-center rounded-lg bg-canvas p-4 text-center text-sm text-muted">
-                  {failed ? failedText : t("crop.loading")}
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-canvas p-4 text-center text-sm text-muted">
+                  <p>{failed ? failedText : t("crop.loading")}</p>
+                  {failed && url && onPickFile && (
+                    <Button variant="ghost" onClick={onPickFile}>
+                      {t("crop.pickLocal")}
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

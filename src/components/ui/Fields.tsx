@@ -290,6 +290,10 @@ export function ImageField({
             url={file ? undefined : currentUrl ?? undefined}
             defaultRatio={ratio}
             onCancel={() => setCropping(false)}
+            onPickFile={() => {
+              setCropping(false);
+              inputRef.current?.click();
+            }}
             onConfirm={(cropped) => {
               onChange(cropped);
               setCropping(false);

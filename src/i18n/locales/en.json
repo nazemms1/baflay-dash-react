@@ -991,7 +991,8 @@
     "apply": "Apply crop",
     "loading": "Opening the image…",
     "failed": "Could not open or crop the image. Choose another file.",
-    "failedRemote": "This image can't be cropped because the image server doesn't let this site read it. The server must allow reading the image path."
+    "failedRemote": "This image can't be cropped because the image server doesn't let this site read it. The server must allow reading the image path.",
+    "pickLocal": "Choose an image from your device"
   },
   "cities": {
     "addState": "Add state"
