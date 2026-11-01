@@ -8,7 +8,7 @@
     "moduleResolution": "bundler",
     "moduleDetection": "force",
     "resolveJsonModule": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "google.maps"],
     "jsx": "react-jsx",
     "noEmit": true,
     "verbatimModuleSyntax": true,

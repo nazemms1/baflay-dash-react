@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
+import { env } from "@/config/env";
+import { loadGoogleMaps, toLatLng, type GoogleMapsLibraries } from "@/lib/googleMaps";
 
 /** وسط دمشق، يُستعمل حين لا يوجد موقع محفوظ بعد. */
-const DEFAULT_CENTER: L.LatLngTuple = [33.5138, 36.2765];
+const DEFAULT_CENTER: google.maps.LatLngLiteral = { lat: 33.5138, lng: 36.2765 };
 
 export interface LatLng {
   lat: number;
@@ -25,12 +25,35 @@ interface LocationPickerProps {
   onRadiusChange?: (km: number) => void;
 }
 
-const markerIcon = L.divIcon({
-  className: "",
-  html: '<span class="block size-5 rounded-full bg-secondary ring-4 ring-primary shadow-lg"></span>',
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-});
+interface MapState {
+  map: google.maps.Map;
+  libs: GoogleMapsLibraries;
+}
+
+/** المسافة بالكيلومتر بين نقطتين (صيغة هافرساين). */
+const distanceInKm = (from: LatLng, to: LatLng) => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(to.lat - from.lat);
+  const dLng = toRad(to.lng - from.lng);
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(a));
+};
+
+/** نقطة العلامة: دائرة صغيرة بالألوان نفسها التي كانت على الخريطة السابقة. */
+const createMarkerElement = () => {
+  const dot = document.createElement("span");
+  dot.className = "block size-5 rounded-full bg-secondary ring-4 ring-primary shadow-lg";
+  return dot;
+};
+
+/** يركّز الخريطة على الحدود، ويحدّ الزوم بـ15 كما كان في الخريطة السابقة. */
+const fitBoundsCapped = (map: google.maps.Map, bounds: google.maps.LatLngBounds) => {
+  map.fitBounds(bounds, 24);
+  google.maps.event.addListenerOnce(map, "idle", () => {
+    if ((map.getZoom() ?? 0) > 15) map.setZoom(15);
+  });
+};
 
 /**
  * خريطة لتحديد موقع الفرع. النقر يضع العلامة، وسحبها يعدّل الموقع، والدائرة
@@ -49,14 +72,14 @@ export function LocationPicker({
 }: LocationPickerProps) {
   const pickingRadius = onRadiusChange !== undefined;
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
-  const circleRef = useRef<L.Circle | null>(null);
+  const [mapState, setMapState] = useState<MapState | null>(null);
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const circleRef = useRef<google.maps.Circle | null>(null);
   const centeredRef = useRef(false);
   // حدود الدائرة الحالية، فيُركَّز عليها متى صار للحاوية حجم حقيقي.
-  const boundsRef = useRef<L.LatLngBounds | null>(null);
+  const boundsRef = useRef<google.maps.LatLngBounds | null>(null);
 
-  // الاستدعاء يُحدَّث دون إعادة إنشاء الخريطة، فلا تتعلّق الأحداث بقيمة قديمة.
+  // الاستدعاءات تُحدَّث دون إعادة إنشاء الخريطة، فلا تتعلّق الأحداث بقيمة قديمة.
   const onChangeRef = useRef(onChange);
   const onRadiusChangeRef = useRef(onRadiusChange);
   useEffect(() => {
@@ -64,118 +87,151 @@ export function LocationPicker({
     onRadiusChangeRef.current = onRadiusChange;
   });
 
-  // إنشاء الخريطة مرة واحدة، وتدميرها عند الخروج.
+  // إنشاء الخريطة عند كل تغيير في وضع القراءة، وتفريغ حاويتها عند الخروج.
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    const map = L.map(containerRef.current, {
-      center: DEFAULT_CENTER,
-      zoom: 12,
-      dragging: !readOnly,
-      touchZoom: !readOnly,
-      doubleClickZoom: !readOnly,
-      scrollWheelZoom: false,
-      attributionControl: true,
-    });
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap",
-      maxZoom: 19,
-    }).addTo(map);
-
-    if (!readOnly) {
-      map.on("click", (event) => {
-        if (onRadiusChangeRef.current) {
-          // المسافة من العلامة، أي موقع الفرع، إلى النقرة هي النطاق الجديد، والمسافة بالمتر فنحوّلها إلى كيلومتر.
-          const center = markerRef.current?.getLatLng();
-          if (center) onRadiusChangeRef.current(center.distanceTo(event.latlng) / 1000);
-          return;
-        }
-        onChangeRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng });
-      });
-    }
-
-    mapRef.current = map;
     const container = containerRef.current;
+    if (!container || !env.googleMapsApiKey) return;
 
-    // الخريطة داخل نافذة تتحرك وتكبر لحظة فتحها: حين تأخذ الحاوية حجمها الحقيقي نُعيد رسم
-    // الخريطة، ونركّز على الموقع إن لم نفعل بعد. التركيز على حاوية بلا حجم يضع الخريطة خطأً.
-    const observer = new ResizeObserver(() => {
-      map.invalidateSize();
-      if (!centeredRef.current && boundsRef.current && container.clientWidth > 0) {
-        map.fitBounds(boundsRef.current, { padding: [24, 24], maxZoom: 15 });
-        centeredRef.current = true;
-      }
-    });
-    observer.observe(container);
+    let active = true;
+    let observer: ResizeObserver | undefined;
+
+    loadGoogleMaps()
+      .then((libs) => {
+        if (!active) return;
+
+        const map = new libs.maps.Map(container, {
+          center: DEFAULT_CENTER,
+          zoom: 12,
+          mapId: env.googleMapId || undefined,
+          gestureHandling: readOnly ? "none" : "cooperative",
+          clickableIcons: false,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+        });
+
+        if (!readOnly) {
+          map.addListener("click", (event: google.maps.MapMouseEvent) => {
+            const point = toLatLng(event.latLng);
+            if (!point) return;
+            if (onRadiusChangeRef.current) {
+              // المسافة من العلامة، أي موقع الفرع، إلى النقرة هي النطاق الجديد.
+              const center = toLatLng(markerRef.current?.position);
+              if (center) onRadiusChangeRef.current(distanceInKm(center, point));
+              return;
+            }
+            onChangeRef.current?.(point);
+          });
+        }
+
+        // الخريطة داخل نافذة تتحرك وتكبر لحظة فتحها: حين تأخذ الحاوية حجمها الحقيقي نُعيد رسم
+        // الخريطة، ونركّز على الموقع إن لم نفعل بعد. التركيز على حاوية بلا حجم يضع الخريطة خطأً.
+        observer = new ResizeObserver(() => {
+          google.maps.event.trigger(map, "resize");
+          if (!centeredRef.current && boundsRef.current && container.clientWidth > 0) {
+            fitBoundsCapped(map, boundsRef.current);
+            centeredRef.current = true;
+          }
+        });
+        observer.observe(container);
+
+        setMapState({ map, libs });
+      })
+      .catch(() => undefined);
 
     return () => {
-      observer.disconnect();
-      map.remove();
-      mapRef.current = null;
+      active = false;
+      observer?.disconnect();
+      setMapState(null);
+      // كل خريطة تُنشأ داخل الحاوية نفسها، فنفرغها كي لا تتراكم الخرائط.
+      container.replaceChildren();
+    };
+  }, [readOnly]);
+
+  // العلامة والدائرة تُنشآن مع كل خريطة وتُزالان معها، ثم تتبعان القيم بالمزامنة أدناه.
+  useEffect(() => {
+    if (!mapState) return;
+    const { map, libs } = mapState;
+
+    const marker = new libs.marker.AdvancedMarkerElement({
+      map,
+      content: createMarkerElement(),
+      // الدائرة الصغيرة مُحاذاة بمركزها لا بأسفلها، فتقع النقطة تماماً على الموقع.
+      anchorLeft: "-50%",
+      anchorTop: "-50%",
+      gmpDraggable: false,
+      gmpClickable: false,
+    });
+    marker.addEventListener("gmp-dragend", () => {
+      const moved = toLatLng(marker.position);
+      if (moved) onChangeRef.current?.(moved);
+    });
+
+    const circle = new libs.maps.Circle({
+      map,
+      center: DEFAULT_CENTER,
+      radius: 0,
+      visible: false,
+      strokeColor: "#bf3c3c",
+      strokeWeight: 2,
+      fillColor: "#fec55f",
+      fillOpacity: 0.25,
+      clickable: false,
+    });
+
+    markerRef.current = marker;
+    circleRef.current = circle;
+
+    return () => {
+      marker.map = null;
+      circle.setMap(null);
       markerRef.current = null;
       circleRef.current = null;
       boundsRef.current = null;
       centeredRef.current = false;
     };
-  }, [readOnly]);
+  }, [mapState]);
 
   // مزامنة العلامة والدائرة مع القيم الحالية.
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
+    const marker = markerRef.current;
+    const circle = circleRef.current;
+    if (!mapState || !marker || !circle) return;
+
+    // في وضع النطاق تبقى العلامة ثابتة مركزاً للدائرة، فلا تُسحب.
+    marker.gmpDraggable = !readOnly && !pickingRadius;
 
     if (lat === null || lng === null || Number.isNaN(lat) || Number.isNaN(lng)) {
-      markerRef.current?.remove();
-      circleRef.current?.remove();
-      markerRef.current = null;
-      circleRef.current = null;
+      marker.position = null;
+      circle.setVisible(false);
+      boundsRef.current = null;
       return;
     }
 
-    const point = L.latLng(lat, lng);
-    // في وضع النطاق تبقى العلامة ثابتة مركزاً للدائرة، فلا تُسحب ولا تستقبل النقر.
-    const movable = !readOnly && !pickingRadius;
-
-    if (!markerRef.current) {
-      const marker = L.marker(point, { icon: markerIcon, draggable: movable, interactive: movable }).addTo(map);
-      marker.on("dragend", () => {
-        const moved = marker.getLatLng();
-        onChangeRef.current?.({ lat: moved.lat, lng: moved.lng });
-      });
-      markerRef.current = marker;
-    } else {
-      markerRef.current.setLatLng(point);
-    }
+    const point = { lat, lng };
+    marker.position = point;
 
     // الدائرة تُرسم فقط حين يُمرَّر نطاق، فالخريطة التي تحدد الموقع وحده تبقى بلا دائرة.
-    const radiusMeters = radiusKm === null || radiusKm === undefined ? null : Math.max(0, radiusKm * 1000);
-    if (radiusMeters === null) {
-      circleRef.current?.remove();
-      circleRef.current = null;
-    } else if (!circleRef.current) {
-      circleRef.current = L.circle(point, {
-        radius: radiusMeters,
-        color: "#bf3c3c",
-        weight: 2,
-        fillColor: "#fec55f",
-        fillOpacity: 0.25,
-        interactive: false,
-      }).addTo(map);
+    if (radiusKm === null || radiusKm === undefined) {
+      circle.setVisible(false);
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend(point);
+      boundsRef.current = bounds;
     } else {
-      circleRef.current.setLatLng(point);
-      circleRef.current.setRadius(radiusMeters);
+      circle.setCenter(point);
+      circle.setRadius(Math.max(0, radiusKm * 1000));
+      circle.setVisible(true);
+      boundsRef.current = circle.getBounds() ?? null;
     }
 
     // أول مرة يظهر فيها موقع محفوظ: نركّز الخريطة على الدائرة كلها إن وُجدت، أو على الموقع، بشرط أن تكون الحاوية ظاهرة.
-    boundsRef.current = circleRef.current?.getBounds() ?? L.latLngBounds([point]);
     const container = containerRef.current;
-    if (!centeredRef.current && container && container.clientWidth > 0) {
-      map.invalidateSize();
-      map.fitBounds(boundsRef.current, { padding: [24, 24], maxZoom: 15 });
+    if (!centeredRef.current && boundsRef.current && container && container.clientWidth > 0) {
+      google.maps.event.trigger(mapState.map, "resize");
+      fitBoundsCapped(mapState.map, boundsRef.current);
       centeredRef.current = true;
     }
-  }, [lat, lng, radiusKm, readOnly, pickingRadius]);
+  }, [mapState, lat, lng, radiusKm, readOnly, pickingRadius]);
 
   return (
     <div
