@@ -9,12 +9,6 @@ const RADIUS_MIN = 0.5;
 const RADIUS_MAX = 20;
 const RADIUS_STEP = 0.5;
 
-/** يُقرّب النطاق المُحدَّد على الخريطة إلى خطوة المنزلق نفسها، ويُحصر في حدوده. */
-function snapRadius(km: number) {
-  const stepped = Math.round(km / RADIUS_STEP) * RADIUS_STEP;
-  return Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, stepped));
-}
-
 /** عنوان قسم الخريطة مع تلميحه، وإجراء اختياري يظهر بجانبه كزر الإزالة. */
 function SectionHeader({ title, hint, action }: { title: string; hint: string; action?: ReactNode }) {
   return (
@@ -33,8 +27,8 @@ function SectionHeader({ title, hint, action }: { title: string; hint: string; a
 
 /**
  * حقل الموقع: خريطة لتحديد موقع الفرع، والنقر يضعه والسحب يعدّله. وإن مُرِّر
- * `onRadiusChange` تظهر خريطة ثانية لنطاق التوصيل بعنوانها الخاص، فالنقر عليها يضبط
- * النطاق بالمسافة من الفرع، والمنزلق للضبط الدقيق. لا تُدخل الإحداثيات يدوياً.
+ * `onRadiusChange` تظهر خريطة ثانية لنطاق التوصيل بنقطة مركز خاصة بها، مستقلة عن
+ * موقع الفرع، فالنقر عليها يضع المركز، والمنزلق لتحديد المسافة. لا تُدخل الإحداثيات يدوياً.
  */
 export function LocationField({
   label,
@@ -43,6 +37,9 @@ export function LocationField({
   radius,
   onChange,
   onRadiusChange,
+  areaLat,
+  areaLng,
+  onAreaChange,
   error,
 }: {
   label: string;
@@ -52,22 +49,27 @@ export function LocationField({
   onChange: (point: { lat: number; lng: number } | null) => void;
   /** يُمرَّر للحقول التي لها نطاق توصيل فقط، فتظهر الخريطة الثانية. */
   onRadiusChange?: (km: number | null) => void;
+  /** مركز نطاق التوصيل، ويبقى منفصلاً عن موقع الفرع. */
+  areaLat?: number | null;
+  areaLng?: number | null;
+  onAreaChange?: (point: { lat: number; lng: number } | null) => void;
   error?: string;
 }) {
   const { t } = useTranslation();
   const hasPoint = lat !== null && lng !== null;
+  const hasArea = areaLat !== null && areaLat !== undefined && areaLng !== null && areaLng !== undefined;
   const radiusValue = radius ?? RADIUS_MIN;
 
-  const clearButton = hasPoint ? (
+  const clearButton = (onClear: () => void) => (
     <button
       type="button"
-      onClick={() => onChange(null)}
+      onClick={onClear}
       className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-secondary hover:bg-secondary-soft sm:h-8"
     >
       <Trash2 className="size-3.5" aria-hidden />
       {t("crud.location.clear")}
     </button>
-  ) : null;
+  );
 
   return (
     <div className="space-y-6 rounded-2xl border border-line bg-surface p-4">
@@ -76,7 +78,7 @@ export function LocationField({
           // مع خريطة النطاق يكون لكل خريطة عنوانها، فلا يجمعهما عنوان الحقل المشترك.
           title={onRadiusChange ? t("crud.location.pointTitle") : label}
           hint={t("crud.location.hint")}
-          action={clearButton}
+          action={hasPoint ? clearButton(() => onChange(null)) : null}
         />
         <LocationPicker lat={lat} lng={lng} onChange={(point) => onChange(point)} />
         <p className="text-xs text-muted tabular-nums" dir="ltr">
@@ -88,13 +90,14 @@ export function LocationField({
         <section className="space-y-3">
           <SectionHeader
             title={t("crud.location.radiusTitle")}
-            hint={hasPoint ? t("crud.location.radiusHint") : t("crud.location.radiusNeedsPoint")}
+            hint={t("crud.location.radiusHint")}
+            action={hasArea && onAreaChange ? clearButton(() => onAreaChange(null)) : null}
           />
           <LocationPicker
-            lat={lat}
-            lng={lng}
+            lat={hasArea ? areaLat! : null}
+            lng={hasArea ? areaLng! : null}
             radiusKm={radiusValue}
-            onRadiusChange={(km) => onRadiusChange(snapRadius(km))}
+            onChange={onAreaChange}
           />
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">

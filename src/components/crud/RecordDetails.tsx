@@ -8,7 +8,7 @@ import { formatNumber } from "@/lib/format";
 import { localizedRecord, type RawBilingual } from "@/lib/localized";
 import { groupFields } from "./groups";
 import { permissionGroupOf, permissionLabel } from "./permissionLabels";
-import { defaultValues } from "./payload";
+import { defaultValues, radiusCenterOf } from "./payload";
 import type { CrudModule, FieldDef, RowColumn } from "./types";
 
 type RecordLike = Record<string, unknown>;
@@ -315,21 +315,30 @@ export function RecordDetails<T extends { id: number | string }>({
               const lat = typeof source[field.key] === "number" ? (source[field.key] as number) : null;
               const lng = typeof source[field.lngKey] === "number" ? (source[field.lngKey] as number) : null;
               const radius = field.radiusKey ? Number(source[field.radiusKey]) || null : null;
+              const area = field.radiusLatKey ? radiusCenterOf(field, source) : { lat: null, lng: null };
               return (
                 <Tile key={field.key} label={field.label} wide>
-                  {lat !== null && lng !== null ? (
-                    <div className="space-y-3">
-                      <LocationPicker lat={lat} lng={lng} radiusKm={radius} readOnly height="16rem" />
-                      <div className="flex flex-wrap gap-4 text-xs text-muted tabular-nums" dir="ltr">
-                        <span>{lat.toFixed(6)}, {lng.toFixed(6)}</span>
-                        {radius !== null && (
-                          <span>{t("crud.location.radius")}: {formatNumber(radius, { maximumFractionDigits: 1 })} {t("crud.location.km")}</span>
-                        )}
+                  <div className="space-y-5">
+                    {lat !== null && lng !== null ? (
+                      <div className="space-y-3">
+                        <LocationPicker lat={lat} lng={lng} readOnly height="16rem" />
+                        <p className="text-xs text-muted tabular-nums" dir="ltr">{lat.toFixed(6)}, {lng.toFixed(6)}</p>
                       </div>
-                    </div>
-                  ) : (
-                    <span className="text-muted">{t("crud.location.notSet")}</span>
-                  )}
+                    ) : (
+                      <span className="text-muted">{t("crud.location.notSet")}</span>
+                    )}
+                    {area.lat !== null && area.lng !== null && (
+                      <div className="space-y-3">
+                        <LocationPicker lat={area.lat} lng={area.lng} radiusKm={radius} readOnly height="16rem" />
+                        <div className="flex flex-wrap gap-4 text-xs text-muted tabular-nums" dir="ltr">
+                          <span>{area.lat.toFixed(6)}, {area.lng.toFixed(6)}</span>
+                          {radius !== null && (
+                            <span>{t("crud.location.radius")}: {formatNumber(radius, { maximumFractionDigits: 1 })} {t("crud.location.km")}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </Tile>
               );
             }

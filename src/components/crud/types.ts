@@ -101,6 +101,9 @@ export type FieldDef =
       kind: "location";
       lngKey: string;
       radiusKey?: string;
+      /** مركز نطاق التوصيل، مستقل عن موقع الفرع: خط عرضه و خط طوله. */
+      radiusLatKey?: string;
+      radiusLngKey?: string;
       radiusLabel?: string;
     });
 

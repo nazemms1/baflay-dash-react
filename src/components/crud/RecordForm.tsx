@@ -557,6 +557,7 @@ export function RecordForm<T extends { id: number | string }>({
         );
       case "location": {
         const radiusKey = field.radiusKey;
+        const { radiusLatKey, radiusLngKey } = field;
         return (
           <LocationField
             label={field.label}
@@ -567,6 +568,13 @@ export function RecordForm<T extends { id: number | string }>({
               setMany({ [field.key]: point?.lat ?? null, [field.lngKey]: point?.lng ?? null })
             }
             onRadiusChange={radiusKey ? (km) => set(radiusKey, km) : undefined}
+            areaLat={radiusLatKey ? ((values[radiusLatKey] as number | null) ?? null) : null}
+            areaLng={radiusLngKey ? ((values[radiusLngKey] as number | null) ?? null) : null}
+            onAreaChange={
+              radiusLatKey && radiusLngKey
+                ? (point) => setMany({ [radiusLatKey]: point?.lat ?? null, [radiusLngKey]: point?.lng ?? null })
+                : undefined
+            }
             error={error}
           />
         );

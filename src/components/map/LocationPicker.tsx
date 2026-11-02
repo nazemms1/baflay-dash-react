@@ -18,27 +18,12 @@ interface LocationPickerProps {
   readOnly?: boolean;
   height?: string;
   onChange?: (point: LatLng) => void;
-  /**
-   * وضع تحديد النطاق: النقر يضبط نطاق التوصيل ليساوي المسافة بين النقرة وموقع الفرع،
-   * والعلامة تبقى ثابتة مركزاً للدائرة.
-   */
-  onRadiusChange?: (km: number) => void;
 }
 
 interface MapState {
   map: google.maps.Map;
   libs: GoogleMapsLibraries;
 }
-
-/** المسافة بالكيلومتر بين نقطتين (صيغة هافرساين). */
-const distanceInKm = (from: LatLng, to: LatLng) => {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(to.lat - from.lat);
-  const dLng = toRad(to.lng - from.lng);
-  const a =
-    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(from.lat)) * Math.cos(toRad(to.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.sqrt(a));
-};
 
 /** نقطة العلامة: دائرة صغيرة بالألوان نفسها التي كانت على الخريطة السابقة. */
 const createMarkerElement = () => {
@@ -56,10 +41,8 @@ const fitBoundsCapped = (map: google.maps.Map, bounds: google.maps.LatLngBounds)
 };
 
 /**
- * خريطة لتحديد موقع الفرع. النقر يضع العلامة، وسحبها يعدّل الموقع، والدائرة
- * تُظهر نطاق التوصيل إن مُرِّر، وتتحدث مع الرقم مباشرة. مع `onRadiusChange`
- * يصير النقر تحديداً للنطاق بدلاً من الموقع. في وضع القراءة تبقى الخريطة
- * للعرض فقط.
+ * خريطة لتحديد نقطة. النقر يضع العلامة، وسحبها يعدّلها، والدائرة تُظهر نطاق
+ * التوصيل إن مُرِّر، وتتحدث مع الرقم مباشرة. في وضع القراءة تبقى الخريطة للعرض فقط.
  */
 export function LocationPicker({
   lat,
@@ -68,9 +51,7 @@ export function LocationPicker({
   readOnly = false,
   height = "18rem",
   onChange,
-  onRadiusChange,
 }: LocationPickerProps) {
-  const pickingRadius = onRadiusChange !== undefined;
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapState, setMapState] = useState<MapState | null>(null);
   const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
@@ -81,10 +62,8 @@ export function LocationPicker({
 
   // الاستدعاءات تُحدَّث دون إعادة إنشاء الخريطة، فلا تتعلّق الأحداث بقيمة قديمة.
   const onChangeRef = useRef(onChange);
-  const onRadiusChangeRef = useRef(onRadiusChange);
   useEffect(() => {
     onChangeRef.current = onChange;
-    onRadiusChangeRef.current = onRadiusChange;
   });
 
   // إنشاء الخريطة عند كل تغيير في وضع القراءة، وتفريغ حاويتها عند الخروج.
@@ -113,14 +92,7 @@ export function LocationPicker({
         if (!readOnly) {
           map.addListener("click", (event: google.maps.MapMouseEvent) => {
             const point = toLatLng(event.latLng);
-            if (!point) return;
-            if (onRadiusChangeRef.current) {
-              // المسافة من العلامة، أي موقع الفرع، إلى النقرة هي النطاق الجديد.
-              const center = toLatLng(markerRef.current?.position);
-              if (center) onRadiusChangeRef.current(distanceInKm(center, point));
-              return;
-            }
-            onChangeRef.current?.(point);
+            if (point) onChangeRef.current?.(point);
           });
         }
 
@@ -198,8 +170,7 @@ export function LocationPicker({
     const circle = circleRef.current;
     if (!mapState || !marker || !circle) return;
 
-    // في وضع النطاق تبقى العلامة ثابتة مركزاً للدائرة، فلا تُسحب.
-    marker.gmpDraggable = !readOnly && !pickingRadius;
+    marker.gmpDraggable = !readOnly;
 
     if (lat === null || lng === null || Number.isNaN(lat) || Number.isNaN(lng)) {
       marker.position = null;
@@ -231,7 +202,7 @@ export function LocationPicker({
       fitBoundsCapped(mapState.map, boundsRef.current);
       centeredRef.current = true;
     }
-  }, [mapState, lat, lng, radiusKm, readOnly, pickingRadius]);
+  }, [mapState, lat, lng, radiusKm, readOnly]);
 
   return (
     <div

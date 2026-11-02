@@ -131,6 +131,8 @@ const BRANCH_NULLABLE_NUMBERS = [
   "delivery_minutes_max",
   "location_x",
   "location_y",
+  "delivery_location_x",
+  "delivery_location_y",
 ];
 
 /**
@@ -165,6 +167,9 @@ export const branchesModule = (t: TFunction): CrudModule<Named> => {
       key: "location_x",
       lngKey: "location_y",
       radiusKey: "delivery_radius_km",
+      // مركز نطاق التوصيل نقطة مستقلة عن موقع الفرع، فلا يتحرك أحدهما مع الآخر.
+      radiusLatKey: "delivery_location_x",
+      radiusLngKey: "delivery_location_y",
       label: t("crud.field.deliveryArea"),
     },
     { kind: "number", key: "delivery_fee", label: t("crud.field.deliveryFee"), group: t("crud.group.delivery"), min: 0 },
