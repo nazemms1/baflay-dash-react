@@ -1094,7 +1094,6 @@
     "pickupOn": "Pickup",
     "pickupOff": "Delivery only",
     "pickupSaved": "Pickup availability saved",
-    "keepOne": "At least one order type must stay open. To stop everything, close the branch.",
     "lastType": "This is the last order type still open. To stop everything, close the branch."
   },
   "paymentMethods": {
@@ -1103,7 +1102,6 @@
     "accepted": "Accepted",
     "notAccepted": "Not accepted",
     "saved": "Payment methods saved",
-    "keepOne": "At least one payment method must stay enabled.",
     "lastMethod": "This is the last payment method still enabled, so it can't be turned off.",
     "noCardAccount": "This branch has no online account, so card payment isn't available."
   },
