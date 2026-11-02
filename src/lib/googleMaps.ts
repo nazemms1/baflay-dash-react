@@ -15,9 +15,13 @@ export const loadGoogleMaps = async () => {
     optionsSet = true;
   }
 
-  const [maps, marker] = await Promise.all([importLibrary("maps"), importLibrary("marker")]);
+  const [maps, marker, places] = await Promise.all([
+    importLibrary("maps"),
+    importLibrary("marker"),
+    importLibrary("places"),
+  ]);
 
-  return { maps, marker };
+  return { maps, marker, places };
 };
 
 export type GoogleMapsLibraries = Awaited<ReturnType<typeof loadGoogleMaps>>;

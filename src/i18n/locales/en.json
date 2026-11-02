@@ -502,6 +502,7 @@
     },
     "location": {
       "hint": "Click the map to set the location, or drag the marker to adjust it.",
+      "searchPlaceholder": "Search an area or address, e.g. Mazzeh",
       "pointTitle": "Location on the map",
       "radiusTitle": "Delivery area on the map",
       "radiusHint": "Click the map to set the center of the delivery area. It is separate from the branch location. Use the slider to set the radius in km.",

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { env } from "@/config/env";
 import { loadGoogleMaps, toLatLng, type GoogleMapsLibraries } from "@/lib/googleMaps";
+import { PlaceSearch } from "./PlaceSearch";
 
 /** وسط دمشق، يُستعمل حين لا يوجد موقع محفوظ بعد. */
 const DEFAULT_CENTER: google.maps.LatLngLiteral = { lat: 33.5138, lng: 36.2765 };
@@ -205,12 +206,17 @@ export function LocationPicker({
   }, [mapState, lat, lng, radiusKm, readOnly]);
 
   return (
-    <div
-      ref={containerRef}
-      role="application"
-      aria-label="map"
-      className="w-full overflow-hidden rounded-2xl ring-1 ring-line"
-      style={{ height }}
-    />
+    <div className="w-full space-y-2">
+      {!readOnly && onChange && mapState && (
+        <PlaceSearch map={mapState.map} places={mapState.libs.places} onPick={onChange} />
+      )}
+      <div
+        ref={containerRef}
+        role="application"
+        aria-label="map"
+        className="w-full overflow-hidden rounded-2xl ring-1 ring-line"
+        style={{ height }}
+      />
+    </div>
   );
 }
