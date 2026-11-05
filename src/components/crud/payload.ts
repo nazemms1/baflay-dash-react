@@ -38,23 +38,6 @@ const numberOrNull = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-type LocationField = Extract<FieldDef, { kind: "location" }>;
-
-/**
- * مركز نطاق التوصيل من السجل. الفرع القديم بلا مركز خاص به يبدأ من موقعه، فلا تختفي
- * دائرته، ثم يصير المركز مستقلاً عند الحفظ.
- */
-export function radiusCenterOf(field: LocationField, record: RecordLike): { lat: number | null; lng: number | null } {
-  const { radiusLatKey, radiusLngKey } = field;
-  if (!radiusLatKey || !radiusLngKey) return { lat: null, lng: null };
-
-  const hasCenter = numberOrNull(record[radiusLatKey]) !== null;
-  return {
-    lat: numberOrNull(hasCenter ? record[radiusLatKey] : record[field.key]),
-    lng: numberOrNull(hasCenter ? record[radiusLngKey] : record[field.lngKey]),
-  };
-}
-
 /** القيم الابتدائية للنموذج، من السجل إن وُجد أو فارغة للإنشاء. */
 export function defaultValues(fields: FieldDef[], record: RecordLike | null): Values {
   const values: Values = {};
@@ -101,10 +84,9 @@ export function defaultValues(fields: FieldDef[], record: RecordLike | null): Va
         values[field.key] = numberOrNull(source[field.key]);
         values[field.lngKey] = numberOrNull(source[field.lngKey]);
         if (field.radiusKey) values[field.radiusKey] = source[field.radiusKey] ?? "";
-        if (field.radiusLatKey && field.radiusLngKey) {
-          const center = radiusCenterOf(field, source);
-          values[field.radiusLatKey] = center.lat;
-          values[field.radiusLngKey] = center.lng;
+        if (field.deliveryLatKey && field.deliveryLngKey) {
+          values[field.deliveryLatKey] = numberOrNull(source[field.deliveryLatKey]);
+          values[field.deliveryLngKey] = numberOrNull(source[field.deliveryLngKey]);
         }
         break;
       case "rows": {
@@ -214,9 +196,13 @@ export function buildPayload(fields: FieldDef[], values: Values, mode: Mode): Va
         payload[field.key] = numberOrNull(values[field.key]);
         payload[field.lngKey] = numberOrNull(values[field.lngKey]);
         if (field.radiusKey) payload[field.radiusKey] = numberOrNull(values[field.radiusKey]);
-        if (field.radiusLatKey && field.radiusLngKey) {
-          payload[field.radiusLatKey] = numberOrNull(values[field.radiusLatKey]);
-          payload[field.radiusLngKey] = numberOrNull(values[field.radiusLngKey]);
+        if (field.deliveryLatKey && field.deliveryLngKey) {
+          // الخادم يقبل النقطتين معاً أو يمسحهما معاً، ويرفض إحداهما وحدها بـ422، فلا تُرسل واحدة.
+          const lat = numberOrNull(values[field.deliveryLatKey]);
+          const lng = numberOrNull(values[field.deliveryLngKey]);
+          const complete = lat !== null && lng !== null;
+          payload[field.deliveryLatKey] = complete ? lat : null;
+          payload[field.deliveryLngKey] = complete ? lng : null;
         }
         break;
       case "rows": {

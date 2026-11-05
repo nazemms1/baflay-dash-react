@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { toast } from "sonner";
 import { ShoppingBag, Truck, type LucideIcon } from "lucide-react";
 import { usePermissions } from "@/features/auth/hooks";
@@ -45,15 +44,10 @@ const ORDER_TYPES: Record<OrderType, OrderTypeConfig> = {
   },
 };
 
-/** الخادم يرفض إطفاء آخر نوع طلب مفتوح بالرمز `last_order_type`، فيُعرض نص واضح بدل رسالته الخام. */
-function messageOf(caught: unknown, t: TFunction): string {
-  const apiError = toApiError(caught, t("errors.unexpected"));
-  return apiError.code === "last_order_type" ? t("orderTypes.lastType") : apiError.message;
-}
-
 /**
  * زر تشغيل نوع طلب في صف الفرع: التوصيل أو الاستلام من الفرع. الإيقاف لا يمسّ مسافة التوصيل
- * ولا رسومه، ولا يلغي الطلبات الجارية.
+ * ولا رسومه، ولا يلغي الطلبات الجارية. يجوز إيقاف النوعين معاً، فيُغلق الفرع أمام الطلبات
+ * الإلكترونية (`closed_reason: no_order_types`) ويبقى الكاشير يعمل.
  */
 export function OrderTypeToggle({ row, type }: { row: Named; type: OrderType }) {
   const { t } = useTranslation();
@@ -68,7 +62,7 @@ export function OrderTypeToggle({ row, type }: { row: Named; type: OrderType }) 
       toast.success(t(config.savedKey));
       await queryClient.invalidateQueries({ queryKey: ["branches"] });
     },
-    onError: (caught) => toast.error(messageOf(caught, t)),
+    onError: (caught) => toast.error(toApiError(caught, t("errors.unexpected")).message),
   });
 
   if (!canToggle) return null;

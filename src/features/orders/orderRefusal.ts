@@ -1,24 +1,63 @@
 import type { TFunction } from "i18next";
-import { toText } from "@/lib/coerce";
+import { asRecord, toNumber, toText } from "@/lib/coerce";
 import { toApiError } from "@/lib/http/errors";
+import { formatNumber } from "@/lib/format";
 
-/** رموز الرفض التي يردّها الخادم حين تمنع قاعدة الطلب المفتوح بدء طلب أو تأكيده. */
+/** رموز الرفض التي يردّها الخادم حين تمنع قاعدة بدء طلب أو تأكيده. */
 const REFUSAL_KEYS: Record<string, string> = {
   cash_order_in_progress: "orderRefusal.cashInProgress",
   order_in_progress: "orderRefusal.orderInProgress",
   cart_open_at_another_branch: "orderRefusal.cartAtAnotherBranch",
   delivery_paused: "orderRefusal.deliveryPaused",
   pickup_paused: "orderRefusal.pickupPaused",
+  delivery_only: "orderRefusal.deliveryOnly",
+  cash_paused: "orderRefusal.cashPaused",
+  card_paused: "orderRefusal.cardPaused",
+  outside_your_branch: "orderRefusal.outsideYourBranch",
   branch_closed: "orderRefusal.branchClosed",
   extra_not_offered: "orderRefusal.extraNotOffered",
 };
 
+/** مبلغ بمنزلتين عشريتين كحد أقصى، فلا يُقرَّب الناقص 7.5 إلى 8. */
+const amountText = (value: unknown, currency: string): string => {
+  const digits = formatNumber(toNumber(value), { maximumFractionDigits: 2 });
+  return currency ? `${digits} ${currency}` : digits;
+};
+
+/** نص رفض الإغلاق حسب `data.closed_reason`: كل سبب بنصه، وبرّا الدوام برسالة الخادم لأنها تذكر اليوم والوقت. */
+function branchClosedMessage(reason: string, serverMessage: string, t: TFunction): string {
+  switch (reason) {
+    case "outside_opening_hours":
+      return serverMessage || t("orderRefusal.branchClosed");
+    case "no_order_types":
+      return t("orderRefusal.branchClosedNoOrderTypes");
+    case "no_payment_methods":
+      return t("orderRefusal.branchClosedNoPaymentMethods");
+    default:
+      return t("orderRefusal.branchClosed");
+  }
+}
+
 /**
  * نص الرفض للكاشير: للرموز المعروفة نص مترجم يذكر رقم الطلب المفتوح حين يأتي من الخادم،
- * وغيرها تبقى رسالة الخادم كما هي.
+ * وغيرها تبقى رسالة الخادم كما هي. يُقرأ الرفض من الرمز `code` لا من نص الرسالة.
  */
 export function orderRefusalMessage(error: unknown, t: TFunction, fallback: string): string {
   const apiError = toApiError(error, fallback);
+  const data = asRecord(apiError.details.data);
+
+  if (apiError.code === "branch_closed") {
+    return branchClosedMessage(toText(data.closed_reason), apiError.message, t);
+  }
+
+  if (apiError.code === "below_minimum_order") {
+    const currency = toText(data.currency);
+    return t("orderRefusal.belowMinimumOrder", {
+      min: amountText(data.min_order_amount, currency),
+      missing: amountText(data.missing, currency),
+    });
+  }
+
   const key = apiError.code ? REFUSAL_KEYS[apiError.code] : undefined;
   if (!key) return apiError.message;
   // الرفض يحمل رقم الطلب المفتوح واسم فرعه، فيُذكران ليعرف الكاشير أين الطلب.

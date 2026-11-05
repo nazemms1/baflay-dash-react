@@ -4,11 +4,12 @@ import clsx from "clsx";
 import { currentLanguage, type Language } from "@/i18n";
 import { LocationPicker } from "@/components/map/LocationPicker";
 import { Badge } from "@/components/ui/Badge";
+import { toNullableNumber } from "@/lib/coerce";
 import { formatNumber } from "@/lib/format";
 import { localizedRecord, type RawBilingual } from "@/lib/localized";
 import { groupFields } from "./groups";
 import { permissionGroupOf, permissionLabel } from "./permissionLabels";
-import { defaultValues, radiusCenterOf } from "./payload";
+import { defaultValues } from "./payload";
 import type { CrudModule, FieldDef, RowColumn } from "./types";
 
 type RecordLike = Record<string, unknown>;
@@ -312,10 +313,15 @@ export function RecordDetails<T extends { id: number | string }>({
         <Section key={`${group.title ?? "general"}-${index}`} title={group.title ?? t("crud.group.general")}>
           {group.fields.map((field) => {
             if (field.kind === "location") {
-              const lat = typeof source[field.key] === "number" ? (source[field.key] as number) : null;
-              const lng = typeof source[field.lngKey] === "number" ? (source[field.lngKey] as number) : null;
-              const radius = field.radiusKey ? Number(source[field.radiusKey]) || null : null;
-              const area = field.radiusLatKey ? radiusCenterOf(field, source) : { lat: null, lng: null };
+              const lat = toNullableNumber(source[field.key]);
+              const lng = toNullableNumber(source[field.lngKey]);
+              const radius = field.radiusKey ? toNullableNumber(source[field.radiusKey]) : null;
+              const ownLat = field.deliveryLatKey ? toNullableNumber(source[field.deliveryLatKey]) : null;
+              const ownLng = field.deliveryLngKey ? toNullableNumber(source[field.deliveryLngKey]) : null;
+              const hasOwn = ownLat !== null && ownLng !== null;
+              // خريطة النطاق تقف على نقطتها الخاصة إن وُجدت، وإلا على موقع الفرع.
+              const areaLat = hasOwn ? ownLat : lat;
+              const areaLng = hasOwn ? ownLng : lng;
               return (
                 <Tile key={field.key} label={field.label} wide>
                   <div className="space-y-5">
@@ -327,13 +333,16 @@ export function RecordDetails<T extends { id: number | string }>({
                     ) : (
                       <span className="text-muted">{t("crud.location.notSet")}</span>
                     )}
-                    {area.lat !== null && area.lng !== null && (
+                    {field.radiusKey && areaLat !== null && areaLng !== null && (
                       <div className="space-y-3">
-                        <LocationPicker lat={area.lat} lng={area.lng} radiusKm={radius} readOnly height="16rem" />
+                        <p className="text-sm font-medium text-ink-soft">{t("crud.location.radiusTitle")}</p>
+                        <LocationPicker lat={areaLat} lng={areaLng} radiusKm={radius} readOnly height="16rem" />
                         <div className="flex flex-wrap gap-4 text-xs text-muted tabular-nums" dir="ltr">
-                          <span>{area.lat.toFixed(6)}, {area.lng.toFixed(6)}</span>
+                          <span>
+                            {hasOwn ? `${areaLat.toFixed(6)}, ${areaLng.toFixed(6)}` : t("crud.location.areaSameAsBranch")}
+                          </span>
                           {radius !== null && (
-                            <span>{t("crud.location.radius")}: {formatNumber(radius, { maximumFractionDigits: 1 })} {t("crud.location.km")}</span>
+                            <span>{t("crud.location.radius")}: {formatNumber(radius, { maximumFractionDigits: 2 })} {t("crud.location.km")}</span>
                           )}
                         </div>
                       </div>

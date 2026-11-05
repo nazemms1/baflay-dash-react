@@ -2,21 +2,37 @@
  * حالة الفرع الآن كما يعيدها الخادم في كل استجابة للفرع. لا يستورد هذا الملف شيئاً من المشروع،
  * ليعمل في اختبارات Node مباشرة.
  */
-export type BranchStatus = "open" | "closedByBranch" | "outsideHours" | "hidden" | "unknown";
+export type BranchStatus =
+  | "open"
+  | "closedByBranch"
+  | "outsideHours"
+  | "noOrderTypes"
+  | "noPaymentMethods"
+  | "hidden"
+  | "unknown";
 
 /**
- * `closed_reason`: `null` يعني مفتوحاً، و`closed_by_branch` أغلقه الفرع يدوياً،
- * و`outside_opening_hours` برّا الدوام، و`hidden` مخفي. الحقل الغائب لا يُفترض له شيء.
+ * `closed_reason`: `null` يعني مفتوحاً، و`closed_by_branch` أغلقه الفرع يدوياً، و`outside_opening_hours`
+ * برّا الدوام، و`no_order_types` التوصيل والاستلام مطفيان معاً، و`no_payment_methods` النقد والبطاقة
+ * مطفيان معاً، و`hidden` مخفي. الحقل الغائب لا يُفترض له شيء، وكذلك سبب لا نعرفه.
  */
 export function branchStatusOf(row: Record<string, unknown>): BranchStatus {
-  if (row.closed_reason === undefined) return "unknown";
-  switch (row.closed_reason) {
+  return closedReasonStatus(row.closed_reason);
+}
+
+/** نفس التحويل لقيمة `closed_reason` وحدها، كالتي تأتي في `by_branch` للوحة العمليات. */
+export function closedReasonStatus(reason: unknown): BranchStatus {
+  switch (reason) {
     case null:
       return "open";
     case "closed_by_branch":
       return "closedByBranch";
     case "outside_opening_hours":
       return "outsideHours";
+    case "no_order_types":
+      return "noOrderTypes";
+    case "no_payment_methods":
+      return "noPaymentMethods";
     case "hidden":
       return "hidden";
     default:

@@ -3,7 +3,9 @@
  * فلا تعرف الشاشات شيئاً عن شكل JSON الخادم.
  */
 
-export type Period = "today" | "yesterday" | "7d" | "30d" | "90d" | "all";
+import type { BranchStatus } from "@/features/branches/branchStatus";
+
+export type Period ="today" | "yesterday" | "7d" | "30d" | "90d" | "all";
 export type PeriodChoice = Period | "custom";
 export type DashboardTab = "overview" | "operations" | "products" | "customers";
 
@@ -100,9 +102,24 @@ export interface QueueRow {
   isLate: boolean;
 }
 
+/** نوع الطلب الذي يعرضه الفرع للزبائن، كما يأتي في `offered_order_types`. */
+export type OrderTypeName = "delivery" | "pickup";
+
+/** حمل فرع واحد في لوحة العمليات: طلباته المفتوحة، وهل يستقبل طلبات الآن ولماذا لا. */
+export interface BranchLoad {
+  name: string;
+  openOrders: number;
+  lateOrders: number;
+  oldestMinutes: number;
+  /** حالة الفرع الآن من `closed_reason`، و`unknown` إن لم يرسلها الخادم. */
+  status: BranchStatus;
+  /** الأنواع التي يعرضها الفرع الآن: التوصيل، والاستلام، أو الاثنان. فارغة إن لم يرسلها الخادم. */
+  offeredOrderTypes: OrderTypeName[];
+}
+
 export interface Operations {
   queue: QueueRow[];
-  branches: { name: string; openOrders: number; lateOrders: number; oldestMinutes: number }[];
+  branches: BranchLoad[];
   carts: { total: number; withItems: number; abandonmentPct: number };
   rejections: { reason: string; orders: number }[];
 }

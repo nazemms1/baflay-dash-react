@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { toast } from "sonner";
 import { Banknote, CreditCard, type LucideIcon } from "lucide-react";
 import { usePermissions } from "@/features/auth/hooks";
@@ -40,14 +39,9 @@ const PAYMENT_METHODS: Record<PaymentMethod, PaymentMethodConfig> = {
 /** صلاحية تعديل طرق الدفع، بالاسم الذي يعرفه الخادم. */
 const PAYMENT_METHODS_PERMISSION = "branches.payment.methods.update";
 
-/** الخادم يرفض إطفاء آخر طريقة دفع مفعّلة بالرمز `last_payment_method`، فيُعرض نص واضح بدل رسالته الخام. */
-function messageOf(caught: unknown, t: TFunction): string {
-  const apiError = toApiError(caught, t("errors.unexpected"));
-  return apiError.code === "last_payment_method" ? t("paymentMethods.lastMethod") : apiError.message;
-}
-
 /**
  * زر قبول طريقة دفع في صف الفرع: النقد أو البطاقة. البطاقة معطّلة للفرع الذي لا حساب إلكترونياً له.
+ * يجوز إيقاف الطريقتين معاً، فيُغلق الفرع أمام الطلبات الإلكترونية (`closed_reason: no_payment_methods`).
  */
 export function PaymentMethodToggle({ row, method }: { row: Named; method: PaymentMethod }) {
   const { t } = useTranslation();
@@ -63,7 +57,7 @@ export function PaymentMethodToggle({ row, method }: { row: Named; method: Payme
       toast.success(t("paymentMethods.saved"));
       await queryClient.invalidateQueries({ queryKey: ["branches"] });
     },
-    onError: (caught) => toast.error(messageOf(caught, t)),
+    onError: (caught) => toast.error(toApiError(caught, t("errors.unexpected")).message),
   });
 
   if (!canToggle) return null;

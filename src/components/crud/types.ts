@@ -97,14 +97,20 @@ export type FieldDef =
       viewColumns?: RowColumn[];
     })
   | (Common & {
-      /** موقع على الخريطة: `key` هو خط العرض، و`lngKey` خط الطول، و`radiusKey` نطاق التوصيل. */
+      /**
+       * موقع على الخريطة: `key` هو خط العرض، و`lngKey` خط الطول، و`radiusKey` نطاق التوصيل.
+       * الخريطة الأولى لهذا الموقع.
+       */
       kind: "location";
       lngKey: string;
       radiusKey?: string;
-      /** مركز نطاق التوصيل، مستقل عن موقع الفرع: خط عرضه و خط طوله. */
-      radiusLatKey?: string;
-      radiusLngKey?: string;
-      radiusLabel?: string;
+      /**
+       * نقطة خريطة التوصيل الثانية: خط عرضها وخط طولها. تتحرك علامتها وحدها دون أن يتغير موقع
+       * الفرع، وعليها تُرسم دائرة النطاق. اختيارية: تُرسل معاً أو تُمسح معاً، وإن غابت تُعرض الخريطة
+       * على موقع الفرع.
+       */
+      deliveryLatKey?: string;
+      deliveryLngKey?: string;
     });
 
 /**

@@ -129,6 +129,7 @@ const BRANCH_NULLABLE_NUMBERS = [
   "delivery_price_per_km",
   "delivery_minutes_min",
   "delivery_minutes_max",
+  "min_order_amount",
   "location_x",
   "location_y",
   "delivery_location_x",
@@ -137,13 +138,14 @@ const BRANCH_NULLABLE_NUMBERS = [
 
 /**
  * تطبيع حمولة الفرع قبل الإرسال كما يتوقعه الخادم: الرقم الفارغ يصير نصاً فارغاً
- * ليُفرَّغ، ورسوم التوصيل الفارغة صفراً لأنها أساس دائم.
+ * ليُفرَّغ، ورسوم التوصيل الفارغة صفراً لأنها أساس دائم. والحد الأدنى للطلب 0 يعني بلا حد، فيُرسل فارغاً.
  */
 function normalizeBranchPayload(values: Values): Values {
   const payload: Values = { ...values };
   for (const key of BRANCH_NULLABLE_NUMBERS) {
     if (payload[key] === null || payload[key] === undefined) payload[key] = "";
   }
+  if (Number(payload.min_order_amount) === 0) payload.min_order_amount = "";
   payload.delivery_fee = payload.delivery_fee ?? 0;
   return payload;
 }
@@ -167,12 +169,20 @@ export const branchesModule = (t: TFunction): CrudModule<Named> => {
       key: "location_x",
       lngKey: "location_y",
       radiusKey: "delivery_radius_km",
-      // مركز نطاق التوصيل نقطة مستقلة عن موقع الفرع، فلا يتحرك أحدهما مع الآخر.
-      radiusLatKey: "delivery_location_x",
-      radiusLngKey: "delivery_location_y",
+      // الخريطة الثانية: نقطتها مستقلة عن موقع الفرع، وعليها دائرة النطاق. تُرسل النقطتان معاً أو تُمسحان معاً.
+      deliveryLatKey: "delivery_location_x",
+      deliveryLngKey: "delivery_location_y",
       label: t("crud.field.deliveryArea"),
     },
     { kind: "number", key: "delivery_fee", label: t("crud.field.deliveryFee"), group: t("crud.group.delivery"), min: 0 },
+    {
+      kind: "number",
+      key: "min_order_amount",
+      label: t("crud.field.minOrderAmount"),
+      hint: t("crud.field.minOrderAmountHint"),
+      group: t("crud.group.delivery"),
+      min: 0,
+    },
     { kind: "number", key: "delivery_price_per_km", label: t("crud.field.deliveryPricePerKm"), group: t("crud.group.delivery"), min: 0, max: 1000000 },
     { kind: "number", key: "delivery_minutes_min", label: t("crud.field.deliveryMinMinutes"), group: t("crud.group.delivery"), min: 0 },
     { kind: "number", key: "delivery_minutes_max", label: t("crud.field.deliveryMaxMinutes"), group: t("crud.group.delivery"), min: 0, notBelow: "delivery_minutes_min" },

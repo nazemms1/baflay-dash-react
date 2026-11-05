@@ -154,8 +154,20 @@ check("حالة الفرع تُقرأ من closed_reason كما يعيدها ا�
   assert.equal(status.branchStatusOf({ closed_reason: "hidden" }), "hidden");
 });
 
-check("الحقل الغائب لا يُفترض له أنه مفتوح", () => {
+check("التوصيل والاستلام مطفيان معاً، أو النقد والبطاقة معاً: الفرع مغلق بسببه", () => {
+  assert.equal(status.branchStatusOf({ closed_reason: "no_order_types" }), "noOrderTypes");
+  assert.equal(status.branchStatusOf({ closed_reason: "no_payment_methods" }), "noPaymentMethods");
+});
+
+check("الحقل الغائب أو السبب غير المعروف لا يُفترض له أنه مفتوح", () => {
   assert.equal(status.branchStatusOf({}), "unknown");
+  assert.equal(status.branchStatusOf({ closed_reason: "something_new" }), "unknown");
+});
+
+check("closedReasonStatus يقرأ القيمة وحدها كما تأتي في by_branch", () => {
+  assert.equal(status.closedReasonStatus(null), "open");
+  assert.equal(status.closedReasonStatus("no_order_types"), "noOrderTypes");
+  assert.equal(status.closedReasonStatus(undefined), "unknown");
 });
 
 check("وقت الفتح يُعرض بتوقيت الفرع لا بتوقيت الجهاز", () => {

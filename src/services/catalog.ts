@@ -35,15 +35,15 @@ export const branchApi = {
       .put(`branches/${branchId}/delivery-availability`, { is_accepting_delivery: isAcceptingDelivery })
       .then((response) => response.data as unknown),
 
-  /** الاستلام من الفرع. إيقافه مع إيقاف التوصيل معاً مرفوض (`last_order_type`). */
+  /** الاستلام من الفرع. يجوز إيقافه مع التوصيل معاً، فيرجع الفرع `closed_reason: no_order_types`. */
   setPickupAvailability: (branchId: Id, isAcceptingPickup: boolean) =>
     api
       .put(`branches/${branchId}/pickup-availability`, { is_accepting_pickup: isAcceptingPickup })
       .then((response) => response.data as unknown),
 
   /**
-   * طرق الدفع في الفرع: النقد والبطاقة، ويُرسل منهما ما يُراد تغييره. إطفاء آخر طريقة مفعّلة
-   * مرفوض (`last_payment_method`)، والبطاقة لا تُفعَّل لفرع بلا حساب إلكتروني.
+   * طرق الدفع في الفرع: النقد والبطاقة، ويُرسل منهما ما يُراد تغييره. يجوز إيقافهما معاً،
+   * فيرجع الفرع `closed_reason: no_payment_methods`. والبطاقة لا تُفعَّل لفرع بلا حساب إلكتروني.
    */
   setPaymentMethods: (branchId: Id, body: { accepts_cash?: boolean; accepts_card?: boolean }) =>
     api.put(`branches/${branchId}/payment-methods`, body).then((response) => response.data as unknown),

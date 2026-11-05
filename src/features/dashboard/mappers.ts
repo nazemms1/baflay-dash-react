@@ -1,10 +1,13 @@
+import { closedReasonStatus, type BranchStatus } from "@/features/branches/branchStatus";
 import { asArray, asRecord, toNullableNumber, toNumber, toText, type UnknownRecord } from "@/lib/coerce";
 import type {
   Alert,
   AlertSeverity,
+  BranchLoad,
   BranchRank,
   Customers,
   Operations,
+  OrderTypeName,
   Overview,
   Products,
   QueueRow,
@@ -147,18 +150,36 @@ function toQueueRow(row: UnknownRecord): QueueRow {
   };
 }
 
+/** حالة الفرع من `closed_reason`، وإن غاب فمن `is_open_now`: المفتوح مفتوح، وغيره مجهول السبب. */
+function toLoadStatus(row: UnknownRecord): BranchStatus {
+  if (row.closed_reason !== undefined) return closedReasonStatus(row.closed_reason);
+  return row.is_open_now === true ? "open" : "unknown";
+}
+
+/** الأنواع المعروضة: ما يعرفه الواجهة فقط، بترتيب ثابت (التوصيل ثم الاستلام) مهما كان ترتيب الخادم. */
+function toOfferedTypes(value: unknown): OrderTypeName[] {
+  const offered = asArray<unknown>(value);
+  return (["delivery", "pickup"] as const).filter((type) => offered.includes(type));
+}
+
+function toBranchLoad(row: UnknownRecord): BranchLoad {
+  return {
+    name: toText(row.name),
+    openOrders: toNumber(row.open_orders),
+    lateOrders: toNumber(row.late_orders),
+    oldestMinutes: toNumber(row.oldest_minutes),
+    status: toLoadStatus(row),
+    offeredOrderTypes: toOfferedTypes(row.offered_order_types),
+  };
+}
+
 export function toOperations(body: unknown): Operations {
   const root = asRecord(body);
   const carts = asRecord(root.abandoned_carts);
 
   return {
     queue: rows(root.queue).map(toQueueRow),
-    branches: rows(root.by_branch).map((row) => ({
-      name: toText(row.name),
-      openOrders: toNumber(row.open_orders),
-      lateOrders: toNumber(row.late_orders),
-      oldestMinutes: toNumber(row.oldest_minutes),
-    })),
+    branches: rows(root.by_branch).map(toBranchLoad),
     carts: {
       total: toNumber(carts.total),
       withItems: toNumber(carts.with_items),

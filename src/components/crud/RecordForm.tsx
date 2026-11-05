@@ -11,6 +11,7 @@ import { ImageField, MultiCheck, SelectField, TextArea, Toggle, type Option } fr
 import { PermissionPicker } from "@/components/ui/PermissionPicker";
 import { RemoteSelect } from "@/components/ui/RemoteSelect";
 import { usePermissions } from "@/features/auth/hooks";
+import { toNullableNumber } from "@/lib/coerce";
 import { ApiError } from "@/lib/http/errors";
 import { containsFile, toFormData } from "@/lib/form-data";
 import { buildPayload, defaultValues, rangeErrors, requiredErrors, serverErrors } from "./payload";
@@ -479,7 +480,7 @@ export function RecordForm<T extends { id: number | string }>({
         const type = field.kind === "phone" ? "tel" : field.kind;
         const placeholder =
           field.kind === "password" && record ? t("crud.keepPassword") : undefined;
-        return (
+        const input = (
           <Input
             label={field.label}
             required={field.required}
@@ -492,6 +493,15 @@ export function RecordForm<T extends { id: number | string }>({
             onChange={(event) => set(field.key, event.target.value)}
             error={error}
           />
+        );
+        // التلميح تحت الحقل، ليعرف المشغّل ما يعنيه الرقم أو النص قبل أن يكتبه.
+        return field.hint ? (
+          <div className="space-y-1.5">
+            {input}
+            <p className="text-xs text-muted">{field.hint}</p>
+          </div>
+        ) : (
+          input
         );
       }
       case "date":
@@ -557,22 +567,24 @@ export function RecordForm<T extends { id: number | string }>({
         );
       case "location": {
         const radiusKey = field.radiusKey;
-        const { radiusLatKey, radiusLngKey } = field;
+        const { deliveryLatKey, deliveryLngKey } = field;
+        // النطاق الفارغ `null`، أما 0 فرقم صحيح يقبله الخادم، فلا يُحوَّل إلى «لا نطاق».
+        const radiusValue = radiusKey ? toNullableNumber(values[radiusKey]) : null;
         return (
           <LocationField
             label={field.label}
             lat={(values[field.key] as number | null) ?? null}
             lng={(values[field.lngKey] as number | null) ?? null}
-            radius={radiusKey ? Number(values[radiusKey]) || null : null}
+            radius={radiusValue}
             onChange={(point) =>
               setMany({ [field.key]: point?.lat ?? null, [field.lngKey]: point?.lng ?? null })
             }
             onRadiusChange={radiusKey ? (km) => set(radiusKey, km) : undefined}
-            areaLat={radiusLatKey ? ((values[radiusLatKey] as number | null) ?? null) : null}
-            areaLng={radiusLngKey ? ((values[radiusLngKey] as number | null) ?? null) : null}
-            onAreaChange={
-              radiusLatKey && radiusLngKey
-                ? (point) => setMany({ [radiusLatKey]: point?.lat ?? null, [radiusLngKey]: point?.lng ?? null })
+            deliveryLat={deliveryLatKey ? ((values[deliveryLatKey] as number | null) ?? null) : null}
+            deliveryLng={deliveryLngKey ? ((values[deliveryLngKey] as number | null) ?? null) : null}
+            onDeliveryChange={
+              deliveryLatKey && deliveryLngKey
+                ? (point) => setMany({ [deliveryLatKey]: point?.lat ?? null, [deliveryLngKey]: point?.lng ?? null })
                 : undefined
             }
             error={error}

@@ -1,5 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { ShoppingBag, Truck } from "lucide-react";
+import { BranchStatusPill } from "@/features/branches/BranchStatusBadge";
 import { Panel } from "@/components/ui/Panel";
 import { ShareBar, Skeleton } from "@/components/ui/Bars";
 import { EmptyState } from "@/components/ui/States";
@@ -8,9 +10,34 @@ import { formatMoney, formatNumber, formatPercent, formatWait } from "@/lib/form
 import { QueryBody } from "../QueryBody";
 import { KpiTile, OrderStatus } from "../parts";
 import { QuickLink } from "../QuickLink";
-import type { Operations } from "../types";
+import type { Operations, OrderTypeName } from "../types";
 
 type QueueRow = Operations["queue"][number];
+
+/**
+ * أنواع الطلب التي يعرضها الفرع الآن، بأيقونة لكل نوع. لا شيء يظهر إن لم يرسلها الخادم،
+ * وفرع بلا نوع معروض تكفيه شارة «مغلق» بسببها.
+ */
+function BranchOrderTypes({ types }: { types: OrderTypeName[] }) {
+  const { t } = useTranslation();
+  if (types.length === 0) return null;
+  return (
+    <span className="inline-flex items-center gap-1.5 text-muted">
+      {types.includes("delivery") && (
+        <span title={t("crud.field.isAcceptingDelivery")} className="inline-flex">
+          <Truck className="size-4" aria-hidden />
+          <span className="sr-only">{t("crud.field.isAcceptingDelivery")}</span>
+        </span>
+      )}
+      {types.includes("pickup") && (
+        <span title={t("orderTypes.pickupField")} className="inline-flex">
+          <ShoppingBag className="size-4" aria-hidden />
+          <span className="sr-only">{t("orderTypes.pickupField")}</span>
+        </span>
+      )}
+    </span>
+  );
+}
 
 export function OperationsTab({ query }: { query: UseQueryResult<Operations> }) {
   return (
@@ -145,6 +172,13 @@ function OperationsContent({ data }: { data: Operations }) {
                       )}
                     </span>
                   </div>
+                  {/* الحالة والأنواع المعروضة من الخادم؛ ما لم يرسله الخادم لا يظهر منه شيء. */}
+                  {(branch.status !== "unknown" || branch.offeredOrderTypes.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {branch.status !== "unknown" && <BranchStatusPill status={branch.status} />}
+                      <BranchOrderTypes types={branch.offeredOrderTypes} />
+                    </div>
+                  )}
                   <ShareBar value={branch.openOrders} max={maxOpen} tone={branch.lateOrders > 0 ? "danger" : "primary"} />
                 </li>
               ))}

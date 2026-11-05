@@ -36,6 +36,22 @@ const ISSUE_KEY: Record<PeriodIssue, string> = {
   sameTime: "openingHours.sameTime",
 };
 
+/** خطأ الخادم لفترة بعينها، بمفتاح `opening_hours.monday.0` أو ما تحته مثل `opening_hours.monday.0.opens`. */
+function serverPeriodError(errors: Record<string, string>, day: WeekDay, index: number): string | null {
+  const prefix = `opening_hours.${day}.${index}`;
+  const key = Object.keys(errors).find((candidate) => candidate === prefix || candidate.startsWith(`${prefix}.`));
+  return key ? errors[key] || null : null;
+}
+
+/** أخطاء الجدول كله: مفتاح `opening_hours` نفسه، أو يوم كامل مثل `opening_hours.friday`، دون فترة بعينها. */
+function serverScheduleErrors(errors: Record<string, string>): string[] {
+  const periodKey = /^opening_hours\.[a-z]+\.\d+/;
+  const messages = Object.entries(errors)
+    .filter(([key, message]) => message && key.startsWith("opening_hours") && !periodKey.test(key))
+    .map(([, message]) => message);
+  return [...new Set(messages)];
+}
+
 /** زر أوقات الدوام والعطل في صف الفرع. يظهر لمن يملك الصلاحية فقط. */
 export function OpeningHoursAction({ row }: { row: Named }) {
   const { t } = useTranslation();
@@ -132,8 +148,13 @@ function OpeningHoursDialog({ row, onClose }: { row: Named; onClose: () => void 
   const periodError = (day: WeekDay, index: number): string | null => {
     const issue = issues[`${day}.${index}`];
     if (issue) return t(ISSUE_KEY[issue]);
-    return serverErrors[`opening_hours.${day}.${index}`] || null;
+    return serverPeriodError(serverErrors, day, index);
   };
+
+  // أخطاء الجدول كله لا تخص فترة بعينها: تداخل الأيام، ويوم ناقص، وأكثر من ثلاث فترات في يوم.
+  // الخادم يكتبها بالعربية مع اسم اليوم، فتُعرض كما هي.
+  const scheduleErrors = serverScheduleErrors(serverErrors);
+  const hasFieldErrors = scheduleErrors.length > 0 || Boolean(serverErrors.timezone);
 
   const alwaysOpen = isAlwaysOpen(holidays, hours);
 
@@ -166,7 +187,15 @@ function OpeningHoursDialog({ row, onClose }: { row: Named; onClose: () => void 
       <div className="space-y-5">
         {allHolidays && <p className="text-sm text-danger">{t("openingHours.allHoliday")}</p>}
         {!allHolidays && alwaysOpen && <p className="text-sm text-ok">{t("openingHours.alwaysOpen")}</p>}
-        {serverError && <p className="text-sm text-danger">{serverError}</p>}
+        {scheduleErrors.length > 0 && (
+          <ul className="space-y-1 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger">
+            {scheduleErrors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        )}
+        {/* الرسالة العامة تُعرض حين لا يحمل الرد خطأ حقل أوضح منها. */}
+        {serverError && !hasFieldErrors && <p className="text-sm text-danger">{serverError}</p>}
 
         <ul className="space-y-3">
           {WEEK_DAYS.map((day) => {
@@ -244,7 +273,11 @@ function OpeningHoursDialog({ row, onClose }: { row: Named; onClose: () => void 
           dir="ltr"
           placeholder="Asia/Damascus"
           value={timezone}
-          onChange={(event) => setTimezone(event.target.value)}
+          error={serverErrors.timezone || null}
+          onChange={(event) => {
+            clearServerErrors();
+            setTimezone(event.target.value);
+          }}
         />
       </div>
     </Dialog>

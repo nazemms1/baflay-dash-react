@@ -453,6 +453,8 @@
       "deliveryRadius": "Delivery radius (km)",
       "deliveryFee": "Delivery fee",
       "deliveryPricePerKm": "Price per km",
+      "minOrderAmount": "Minimum order amount",
+      "minOrderAmountHint": "In the branch currency. Counted on food only (items and add-ons), before the delivery fee and any discount. Leave empty or 0 for no minimum.",
       "deliveryMinMinutes": "Min delivery time (min)",
       "deliveryMaxMinutes": "Max delivery time (min)",
       "isVisible": "Visible in app",
@@ -503,9 +505,12 @@
     "location": {
       "hint": "Click the map to set the location, or drag the marker to adjust it.",
       "searchPlaceholder": "Search an area or address, e.g. Mazzeh",
-      "pointTitle": "Location on the map",
+      "pointTitle": "Branch location on the map",
       "radiusTitle": "Delivery area on the map",
-      "radiusHint": "Click the map to set the center of the delivery area. It is separate from the branch location. Use the slider to set the radius in km.",
+      "radiusHint": "Click the map or drag the marker to move the center of the delivery area without changing the branch location. Set the circle's radius with the slider, or type the exact number such as 0.3 or 1.25 (up to 20 km).",
+      "radiusNotSet": "No radius set",
+      "areaSameAsBranch": "Centered on the branch location",
+      "resetToBranch": "Reset to branch location",
       "clear": "Clear location",
       "radius": "Delivery radius",
       "km": "km",
@@ -1017,6 +1022,10 @@
       "restore": "Restore",
       "order": "Sort order",
       "availability": "Availability",
+      "delivery": "Delivery",
+      "pickup": "Pickup",
+      "opening": "Opening",
+      "hours": "Hours",
       "payment": "Payment",
       "methods": "Methods",
       "invoice": "Invoice",
@@ -1093,8 +1102,7 @@
     "pickupField": "Pickup at branch",
     "pickupOn": "Pickup",
     "pickupOff": "Delivery only",
-    "pickupSaved": "Pickup availability saved",
-    "lastType": "This is the last order type still open. To stop everything, close the branch."
+    "pickupSaved": "Pickup availability saved"
   },
   "paymentMethods": {
     "cash": "Cash payment",
@@ -1102,15 +1110,17 @@
     "accepted": "Accepted",
     "notAccepted": "Not accepted",
     "saved": "Payment methods saved",
-    "lastMethod": "This is the last payment method still enabled, so it can't be turned off.",
     "noCardAccount": "This branch has no online account, so card payment isn't available."
   },
   "branchStatus": {
     "column": "Status now",
     "open": "Open",
+    "openUntil": "Open until {{time}}",
     "closedByBranch": "Closed by branch",
     "outsideHours": "Outside opening hours",
     "opensAt": "Opens at {{time}}",
+    "noOrderTypes": "Closed — no delivery or pickup",
+    "noPaymentMethods": "Closed — no payment method",
     "hidden": "Hidden"
   },
   "clock": {
@@ -1160,7 +1170,14 @@
     "cartAtAnotherBranch": "A cart is still open{{order}} at another branch.",
     "deliveryPaused": "This branch is not accepting delivery right now.",
     "pickupPaused": "This branch is not accepting pickup right now.",
+    "deliveryOnly": "This branch only offers delivery.",
+    "cashPaused": "This branch is not accepting cash payment right now.",
+    "cardPaused": "This branch is not accepting card payment right now.",
+    "belowMinimumOrder": "The minimum order is {{min}}. Add {{missing}} to complete the order.",
+    "outsideYourBranch": "This is not your branch, so you can't work on it.",
     "branchClosed": "This branch is closed right now.",
+    "branchClosedNoOrderTypes": "This branch is not accepting delivery or pickup orders right now.",
+    "branchClosedNoPaymentMethods": "This branch is not accepting any payment method right now.",
     "extraNotOffered": "Some extras are no longer offered at this branch. Choose them again, or reload the page."
   },
   "receipt": {
@@ -1223,7 +1240,8 @@
       "openMap": "Open in Maps",
       "details": "Details",
       "call": "Call customer",
-      "navigate": "Directions"
+      "navigate": "Directions",
+      "navigateBranch": "Directions to the pickup point"
     },
     "actions": {
       "pickup": "Picked up from branch",

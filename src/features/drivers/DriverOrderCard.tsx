@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Banknote, Clock, CreditCard, Eye, MapPin, Navigation, Phone } from "lucide-react";
+import { Banknote, Clock, CreditCard, Eye, MapPin, Navigation, Phone, Store } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { StatusBadge } from "@/features/orders/StatusBadge";
 import { serverLabelOf } from "@/features/orders/orderStatus";
@@ -9,6 +9,7 @@ import { formatDateTime } from "@/lib/format";
 import type { Named } from "@/services";
 import { DeliveryProgress } from "./DeliveryProgress";
 import { amountOf, customerOf, isCardPayment, refOf } from "./orderFields";
+import { branchPickupPoint, directionsUrl } from "./pickupPoint";
 
 export interface DriverActions {
   pickup: boolean;
@@ -40,6 +41,7 @@ export function DriverOrderCard({ order, actions, busy, onDetails, onPickup, onD
   const failureReason = toText(order.delivery_failed_reason);
   const cardPaid = isCardPayment(order);
   const showFooter = actions.pickup || actions.delivered || actions.failed || onDetails !== null;
+  const pickupPoint = branchPickupPoint(order);
 
   return (
     <article className="flex h-full flex-col gap-4 rounded-2xl border border-line bg-surface p-4 shadow-sm">
@@ -103,6 +105,19 @@ export function DriverOrderCard({ order, actions, busy, onDetails, onPickup, onD
           </a>
         )}
       </div>
+
+      {/* قبل الاستلام يحتاج السائق نقطة الفرع، وهي نقطة الاستلام الخاصة إن وُجدت. */}
+      {actions.pickup && pickupPoint && (
+        <a
+          href={directionsUrl(pickupPoint)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold text-ink transition hover:border-primary hover:bg-primary-soft"
+        >
+          <Store className="size-4" aria-hidden />
+          {t("drivers.card.navigateBranch")}
+        </a>
+      )}
 
       {current === "delivery_failed" && failureReason && (
         <p className="rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">

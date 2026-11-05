@@ -17,6 +17,8 @@ interface LocationPickerProps {
   /** نطاق التوصيل بالكيلومتر، يُرسم دائرةً حول النقطة. بدونه لا تُرسم دائرة. */
   radiusKm?: number | null;
   readOnly?: boolean;
+  /** يعيد تركيز الخريطة على الدائرة كلما تغيّر النطاق، فلا تخرج دائرة كبيرة من الإطار. */
+  refitOnRadius?: boolean;
   height?: string;
   onChange?: (point: LatLng) => void;
 }
@@ -50,6 +52,7 @@ export function LocationPicker({
   lng,
   radiusKm,
   readOnly = false,
+  refitOnRadius = false,
   height = "18rem",
   onChange,
 }: LocationPickerProps) {
@@ -197,13 +200,14 @@ export function LocationPicker({
     }
 
     // أول مرة يظهر فيها موقع محفوظ: نركّز الخريطة على الدائرة كلها إن وُجدت، أو على الموقع، بشرط أن تكون الحاوية ظاهرة.
+    // وخريطة النطاق تعيد التركيز مع كل تغيير في المسافة، ليبقى محيط الدائرة ظاهراً.
     const container = containerRef.current;
-    if (!centeredRef.current && boundsRef.current && container && container.clientWidth > 0) {
+    if ((!centeredRef.current || refitOnRadius) && boundsRef.current && container && container.clientWidth > 0) {
       google.maps.event.trigger(mapState.map, "resize");
       fitBoundsCapped(mapState.map, boundsRef.current);
       centeredRef.current = true;
     }
-  }, [mapState, lat, lng, radiusKm, readOnly]);
+  }, [mapState, lat, lng, radiusKm, readOnly, refitOnRadius]);
 
   return (
     <div className="w-full space-y-2">
