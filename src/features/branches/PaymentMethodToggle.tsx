@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Banknote, CreditCard, type LucideIcon } from "lucide-react";
 import { usePermissions } from "@/features/auth/hooks";
-import { toApiError } from "@/lib/http/errors";
 import { branchApi, type Named } from "@/services";
 
 export type PaymentMethod = "cash" | "card";
@@ -57,7 +56,7 @@ export function PaymentMethodToggle({ row, method }: { row: Named; method: Payme
       toast.success(t("paymentMethods.saved"));
       await queryClient.invalidateQueries({ queryKey: ["branches"] });
     },
-    onError: (caught) => toast.error(toApiError(caught, t("errors.unexpected")).message),
+    // خطأ الخادم يعرضه معترض الطلبات العام، فلا نكرر الإشعار هنا.
   });
 
   if (!canToggle) return null;

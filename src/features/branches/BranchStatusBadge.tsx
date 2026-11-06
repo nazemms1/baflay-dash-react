@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { toText } from "@/lib/coerce";
 import type { Named } from "@/services";
-import { branchStatusOf, localClock, type BranchStatus } from "./branchStatus";
+import { branchStatusOf, isOpenNow, localClock, type BranchStatus } from "./branchStatus";
 
 const TONE: Record<BranchStatus, Tone> = {
   open: "ok",
@@ -33,6 +33,13 @@ export function BranchStatusPill({
 
   const badge = <Badge tone={TONE[status]}>{label ?? t(`branchStatus.${status}`)}</Badge>;
   return detail ? <span title={detail}>{badge}</span> : badge;
+}
+
+/** مفتوح أو مغلق الآن، من `is_open_now`: الجواب الكامل لا مفتاح الفتح اليدوي وحده. */
+export function BranchOpenBadge({ row }: { row: Named }) {
+  const { t } = useTranslation();
+  const open = isOpenNow(row);
+  return <Badge tone={open ? "ok" : "neutral"}>{open ? t("crud.open") : t("crud.closed")}</Badge>;
 }
 
 /**

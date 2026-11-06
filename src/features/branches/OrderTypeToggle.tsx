@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ShoppingBag, Truck, type LucideIcon } from "lucide-react";
 import { usePermissions } from "@/features/auth/hooks";
-import { toApiError } from "@/lib/http/errors";
 import { branchApi, type Named } from "@/services";
 
 export type OrderType = "delivery" | "pickup";
@@ -62,7 +61,7 @@ export function OrderTypeToggle({ row, type }: { row: Named; type: OrderType }) 
       toast.success(t(config.savedKey));
       await queryClient.invalidateQueries({ queryKey: ["branches"] });
     },
-    onError: (caught) => toast.error(toApiError(caught, t("errors.unexpected")).message),
+    // خطأ الخادم يعرضه معترض الطلبات العام، فلا نكرر الإشعار هنا.
   });
 
   if (!canToggle) return null;

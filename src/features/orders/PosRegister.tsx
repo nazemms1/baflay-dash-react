@@ -18,6 +18,7 @@ import { asArray, asRecord, toNullableNumber, toNumber, toText } from "@/lib/coe
 import { formatMoney } from "@/lib/format";
 import { localizedRecord } from "@/lib/localized";
 import { counterOrders, menus, type Named } from "@/services";
+import { comboAllowed } from "@/features/menus/itemCombo";
 import { orderRefusalMessage } from "./orderRefusal";
 import {
   COUNTER_ORDER_PERMISSION,
@@ -127,8 +128,12 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
   const comboName = localizedRecord(asRecord(menuOf.combo), language);
   const currency = toText(menuOf.currency) || allItems[0]?.currency || DEFAULT_CURRENCY;
 
+  // صف الصنف في القائمة، وفيه اقتراحاته وهل يظهر له خيار الوجبة.
+  const menuRowOf = (item: MenuItemOption) =>
+    asArray(menuOf.items).map((entry) => asRecord(entry)).find((entry) => toNumber(entry.item_id ?? entry.id) === item.id);
+
   const suggestionsFor = (item: MenuItemOption): SuggestedItem[] => {
-    const row = asArray(menuOf.items).map((entry) => asRecord(entry)).find((entry) => toNumber(entry.item_id ?? entry.id) === item.id);
+    const row = menuRowOf(item);
     const ids = asArray(row?.suggested_item_ids ?? row?.suggestions).map((value) => toNumber(value));
     return ids.flatMap((id) => {
       const match = allItems.find((entry) => entry.id === id);
@@ -601,6 +606,7 @@ export function PosRegister({ branch, menuId, onChangeBranch, onPaid }: PosRegis
           item={picked}
           comboName={comboName}
           comboPrice={comboPrice}
+          comboAllowed={comboAllowed(menuRowOf(picked))}
           suggestions={suggestionsFor(picked)}
           currency={currency}
           onAdd={addItem}

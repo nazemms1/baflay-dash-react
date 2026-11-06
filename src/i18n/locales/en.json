@@ -123,6 +123,7 @@
     "unexpected": "Something went wrong. Please try again.",
     "sessionExpired": "Your session has expired. Please sign in again.",
     "forbidden": "You don't have permission to do this.",
+    "outsideYourBranch": "This isn't your branch, so you can't change it.",
     "backToLogin": "Back to sign in",
     "boundaryTitle": "Something unexpected happened",
     "boundaryMessage": "Sorry, this screen stopped working. Reload the page; if it keeps happening, contact the technical team.",
@@ -874,6 +875,7 @@
     "mealIncludes": "Includes: {{name}}",
     "comboPrice": "+{{price}} added",
     "noCombo": "No combo at this branch",
+    "noComboForItem": "No combo for this item",
     "quantity": "Quantity",
     "addOns": "Add-ons (up to {{max}})",
     "sauces": "Sauces",
@@ -1159,6 +1161,13 @@
       "friday": "Friday"
     }
   },
+  "itemCombo": {
+    "label": "Combo",
+    "toggle": "Combo option for this item",
+    "on": "On",
+    "off": "Off",
+    "saved": "Combo setting saved"
+  },
   "itemAvailability": {
     "toggle": "Item availability in this menu",
     "unavailable": "Unavailable",
@@ -1171,6 +1180,7 @@
     "deliveryPaused": "This branch is not accepting delivery right now.",
     "pickupPaused": "This branch is not accepting pickup right now.",
     "deliveryOnly": "This branch only offers delivery.",
+    "comboNotOffered": "This item isn't sold as a meal because the menu excludes it from the combo. Choose \"sandwich\".",
     "cashPaused": "This branch is not accepting cash payment right now.",
     "cardPaused": "This branch is not accepting card payment right now.",
     "belowMinimumOrder": "The minimum order is {{min}}. Add {{missing}} to complete the order.",

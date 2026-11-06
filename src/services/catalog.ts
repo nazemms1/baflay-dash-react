@@ -84,6 +84,15 @@ export const menuApi = {
       .put(`menus/${menuId}/items/${itemId}/suggestions`, body)
       .then((response) => response.data as unknown),
 
+  /**
+   * هل يظهر خيار الكومبو (الوجبة) لهذا الصنف داخل القائمة. سعر الكومبو واحد للقائمة، وهذا يستثني
+   * منه الصنف. يعيد الخادم الحالة المحفوظة في `data.has_combo`.
+   */
+  setItemCombo: (menuId: Id, itemId: Id, hasCombo: boolean) =>
+    api
+      .put(`menus/${menuId}/items/${itemId}/combo`, { has_combo: hasCombo })
+      .then((response) => response.data as unknown),
+
   /** توفّر الصنف داخل هذه القائمة. الصنف غير المتوفر يظهر للزبون رمادياً ولا يُضاف إلى السلة. */
   setItemAvailability: (menuId: Id, itemId: Id, isAvailable: boolean) =>
     api

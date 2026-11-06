@@ -6,11 +6,12 @@ import { useBranchScope, usePermissions } from "@/features/auth/hooks";
 import { Pagination } from "@/components/ui/Pagination";
 import { PAGE_SIZE, pageOf } from "@/components/ui/paging";
 import { currentLanguage } from "@/i18n";
-import { asArray, asRecord, toNumber, toText } from "@/lib/coerce";
+import { asArray, asRecord, toNullableNumber, toNumber, toText } from "@/lib/coerce";
 import { formatMoney } from "@/lib/format";
 import { toApiError } from "@/lib/http/errors";
 import { localizedRecord } from "@/lib/localized";
 import { menuApi, type Named } from "@/services";
+import { ITEM_COMBO_PERMISSION, hasComboOf } from "./itemCombo";
 
 /** صلاحية توفّر الصنف داخل القائمة، بالاسم الذي يعرفه الخادم. */
 const AVAILABILITY_PERMISSION = "menus.items.availability.update";
@@ -24,6 +25,8 @@ interface MenuItemView {
   categoryId: number | null;
   categoryName: string;
   available: boolean;
+  /** خيار الكومبو لهذا الصنف، و`null` إن لم يرسل الخادم الحقل بعد. */
+  hasCombo: boolean | null;
 }
 
 /**
@@ -41,6 +44,8 @@ export function MenuDetails({ record }: { record: Named }) {
   const [page, setPage] = useState(1);
   // التوفّر الذي غيّرته هذه النافذة، يظهر فوراً دون انتظار إعادة الجلب.
   const [availability, setAvailability] = useState<Partial<Record<number, boolean>>>({});
+  // كومبو الصنف الذي غيّرته هذه النافذة، بالأسلوب نفسه.
+  const [comboState, setComboState] = useState<Partial<Record<number, boolean>>>({});
 
   // مصدر حالة التوفّر هو القائمة العامة كما يقرؤها الموقع، ونسخة الإدارة قد لا تحمل الحقل.
   const publicMenu = useQuery({
@@ -55,12 +60,26 @@ export function MenuDetails({ record }: { record: Named }) {
     }
     return map;
   }, [publicMenu.data]);
+  // كومبو كل صنف كما يراه الزبون في القائمة العامة، إن أرسله الخادم.
+  const publicCombo = useMemo(() => {
+    const map = new Map<number, boolean>();
+    for (const entry of asArray(asRecord(publicMenu.data).items)) {
+      const row = asRecord(entry);
+      const value = hasComboOf(row);
+      if (value !== null) map.set(toNumber(row.item_id ?? row.id), value);
+    }
+    return map;
+  }, [publicMenu.data]);
 
   const menuCurrency = toText(record.currency);
   // المستخدم المرتبط بفرع يوقف أصناف فرعه وحده، والخادم يرفض قائمة غيرها بـ 403.
   const menuBranchId = toNumber(record.branch_id ?? asRecord(record.branch).id);
-  const canToggle =
-    permissions.has(AVAILABILITY_PERMISSION) && (!scope.isBranchScoped || scope.branchId === menuBranchId);
+  const inScope = !scope.isBranchScoped || scope.branchId === menuBranchId;
+  const canToggle = permissions.has(AVAILABILITY_PERMISSION) && inScope;
+  const canToggleCombo = permissions.has(ITEM_COMBO_PERMISSION) && inScope;
+  // الكومبو لا معنى له في قائمة بلا سعر كومبو، فلا يظهر مفتاحه.
+  const comboPrice = toNullableNumber(record.combo_price ?? asRecord(record.combo).price);
+  const menuHasCombo = comboPrice !== null && comboPrice > 0;
 
   const items = useMemo<MenuItemView[]>(
     () =>
@@ -77,6 +96,7 @@ export function MenuDetails({ record }: { record: Named }) {
           categoryId,
           categoryName: localizedRecord(category, language),
           available: row.is_available !== false,
+          hasCombo: hasComboOf(row),
         };
       }),
     [record.items, language, menuCurrency]
@@ -95,8 +115,23 @@ export function MenuDetails({ record }: { record: Named }) {
     onError: (caught) => toast.error(toApiError(caught, t("errors.unexpected")).message),
   });
 
+  const comboSave = useMutation({
+    mutationFn: ({ itemId, next }: { itemId: number; next: boolean }) =>
+      menuApi.setItemCombo(record.id, itemId, next),
+    onSuccess: (result, { itemId, next }) => {
+      const confirmed = asRecord(asRecord(result).data).has_combo;
+      setComboState((current) => ({ ...current, [itemId]: typeof confirmed === "boolean" ? confirmed : next }));
+      void queryClient.invalidateQueries({ queryKey: ["public-menu", record.id] });
+      // نقطة البيع تقرأ القائمة من هذا المفتاح، فيتجدد خيار الوجبة فيها.
+      void queryClient.invalidateQueries({ queryKey: ["menu-detail", record.id] });
+      toast.success(t("itemCombo.saved"));
+    },
+    // خطأ الخادم يعرضه معترض الطلبات العام، فلا نكرر الإشعار هنا.
+  });
+
   // الأولوية: ما غيّرته هذه النافذة، ثم القائمة العامة، ثم نسخة الإدارة.
   const isOn = (item: MenuItemView) => availability[item.id] ?? publicAvailability.get(item.id) ?? item.available;
+  const comboOf = (item: MenuItemView): boolean | null => comboState[item.id] ?? publicCombo.get(item.id) ?? item.hasCombo;
 
   // تصنيفات الأصناف بترتيب ظهورها، دون تكرار.
   const categories = useMemo(() => {
@@ -145,6 +180,7 @@ export function MenuDetails({ record }: { record: Named }) {
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {paged.items.map((item) => {
             const on = isOn(item);
+            const combo = comboOf(item);
             return (
               <li key={`${item.id}-${item.categoryId ?? "none"}`} className="overflow-hidden rounded-2xl border border-line bg-surface">
                 {item.image ? (
@@ -162,7 +198,7 @@ export function MenuDetails({ record }: { record: Named }) {
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm font-semibold tabular-nums text-ok">{formatMoney(item.price, item.currency)}</p>
                     {canToggle && (
-                      <AvailabilitySwitch
+                      <ToggleSwitch
                         on={on}
                         label={t("itemAvailability.toggle")}
                         disabled={publicMenu.isPending || (save.isPending && save.variables?.itemId === item.id)}
@@ -170,6 +206,24 @@ export function MenuDetails({ record }: { record: Named }) {
                       />
                     )}
                   </div>
+                  {/* مفتاح الكومبو يظهر حين يرسل الخادم حالة الصنف وللقائمة سعر كومبو. */}
+                  {menuHasCombo && combo !== null && (
+                    <div className="flex items-center justify-between gap-2 border-t border-line pt-2">
+                      <span className="text-xs text-ink-soft">{t("itemCombo.label")}</span>
+                      {canToggleCombo ? (
+                        <ToggleSwitch
+                          on={combo}
+                          label={t("itemCombo.toggle")}
+                          disabled={comboSave.isPending && comboSave.variables?.itemId === item.id}
+                          onToggle={() => comboSave.mutate({ itemId: item.id, next: !combo })}
+                        />
+                      ) : (
+                        <span className={`text-xs font-medium ${combo ? "text-ok" : "text-muted"}`}>
+                          {combo ? t("itemCombo.on") : t("itemCombo.off")}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {!on && <p className="text-xs font-medium text-danger">{t("itemAvailability.unavailable")}</p>}
                 </div>
               </li>
@@ -182,8 +236,8 @@ export function MenuDetails({ record }: { record: Named }) {
   );
 }
 
-/** مفتاح التوفّر: مفتوح يعني متوفراً. الزر يحمل الحالة في `aria-checked` للقراءة الصوتية. */
-function AvailabilitySwitch({
+/** مفتاح تشغيل: مفتوح يعني مفعّلاً. الزر يحمل الحالة في `aria-checked` للقراءة الصوتية. */
+function ToggleSwitch({
   on,
   label,
   disabled,

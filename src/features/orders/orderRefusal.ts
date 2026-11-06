@@ -11,6 +11,7 @@ const REFUSAL_KEYS: Record<string, string> = {
   delivery_paused: "orderRefusal.deliveryPaused",
   pickup_paused: "orderRefusal.pickupPaused",
   delivery_only: "orderRefusal.deliveryOnly",
+  combo_not_offered: "orderRefusal.comboNotOffered",
   cash_paused: "orderRefusal.cashPaused",
   card_paused: "orderRefusal.cardPaused",
   outside_your_branch: "orderRefusal.outsideYourBranch",

@@ -1,4 +1,4 @@
-import { closedReasonStatus, type BranchStatus } from "@/features/branches/branchStatus";
+import { isOpenNow, statusFrom } from "@/features/branches/branchStatus";
 import { asArray, asRecord, toNullableNumber, toNumber, toText, type UnknownRecord } from "@/lib/coerce";
 import type {
   Alert,
@@ -49,7 +49,8 @@ function toBranchRank(row: UnknownRecord): BranchRank {
     name: toText(row.name) || toText(row.name_ar),
     nameAr: toText(row.name_ar),
     currency: toText(row.currency),
-    accepting: row.is_accepting_orders !== false,
+    // `is_open_now` إن وصل، وإلا الفتح اليدوي: الفرع قد يقبل الطلبات يدوياً وهو مغلق لسبب آخر.
+    accepting: typeof row.is_open_now === "boolean" ? isOpenNow(row) : row.is_accepting_orders !== false,
     orders: toNumber(row.orders),
     revenue: toNumber(row.revenue),
     averageBasket: toNumber(row.average_basket),
@@ -150,12 +151,6 @@ function toQueueRow(row: UnknownRecord): QueueRow {
   };
 }
 
-/** حالة الفرع من `closed_reason`، وإن غاب فمن `is_open_now`: المفتوح مفتوح، وغيره مجهول السبب. */
-function toLoadStatus(row: UnknownRecord): BranchStatus {
-  if (row.closed_reason !== undefined) return closedReasonStatus(row.closed_reason);
-  return row.is_open_now === true ? "open" : "unknown";
-}
-
 /** الأنواع المعروضة: ما يعرفه الواجهة فقط، بترتيب ثابت (التوصيل ثم الاستلام) مهما كان ترتيب الخادم. */
 function toOfferedTypes(value: unknown): OrderTypeName[] {
   const offered = asArray<unknown>(value);
@@ -168,7 +163,7 @@ function toBranchLoad(row: UnknownRecord): BranchLoad {
     openOrders: toNumber(row.open_orders),
     lateOrders: toNumber(row.late_orders),
     oldestMinutes: toNumber(row.oldest_minutes),
-    status: toLoadStatus(row),
+    status: statusFrom(row.is_open_now, row.closed_reason),
     offeredOrderTypes: toOfferedTypes(row.offered_order_types),
   };
 }

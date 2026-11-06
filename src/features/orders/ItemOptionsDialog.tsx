@@ -48,6 +48,7 @@ export function ItemOptionsDialog({
   item,
   comboName,
   comboPrice,
+  comboAllowed,
   suggestions,
   currency,
   onAdd,
@@ -58,6 +59,8 @@ export function ItemOptionsDialog({
   item: MenuItemOption;
   comboName: string;
   comboPrice: number | null;
+  /** false حين استثنت القائمة هذا الصنف من الكومبو، فلا يُباع وجبة. */
+  comboAllowed: boolean;
   suggestions: SuggestedItem[];
   currency: string;
   onAdd: (draft: ItemDraft) => void;
@@ -184,7 +187,7 @@ export function ItemOptionsDialog({
     setAddedSuggestions((current) => ({ ...current, [suggestion.id]: (current[suggestion.id] ?? 0) + 1 }));
   };
 
-  const canMeal = comboPrice !== null && comboPrice > 0;
+  const canMeal = comboAllowed && comboPrice !== null && comboPrice > 0;
 
   return (
     <Dialog
@@ -227,7 +230,7 @@ export function ItemOptionsDialog({
                     </span>
                   </>
                 ) : (
-                  <span className="block text-xs text-muted">{t("orderBuilder.noCombo")}</span>
+                  <span className="block text-xs text-muted">{t(comboAllowed ? "orderBuilder.noCombo" : "orderBuilder.noComboForItem")}</span>
                 )}
               </button>
             </div>

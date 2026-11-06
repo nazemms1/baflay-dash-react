@@ -164,6 +164,33 @@ check("الحقل الغائب أو السبب غير المعروف لا يُف
   assert.equal(status.branchStatusOf({ closed_reason: "something_new" }), "unknown");
 });
 
+check("is_open_now هو الأساس: فرع يقبل الطلبات يدوياً لكنه مغلق لأن التوصيل والاستلام مطفيان", () => {
+  // كما يرجع الخادم لفرع حلب - غولدن مول.
+  const row = { is_accepting_orders: true, is_open_now: false, closed_reason: "no_order_types" };
+  assert.equal(status.isOpenNow(row), false);
+  assert.equal(status.branchStatusOf(row), "noOrderTypes");
+});
+
+check("is_open_now true يعني مفتوحاً مهما كان closed_reason", () => {
+  assert.equal(status.branchStatusOf({ is_open_now: true, closed_reason: null }), "open");
+  assert.equal(status.branchStatusOf({ is_open_now: true, closed_reason: "closed_by_branch" }), "open");
+  assert.equal(status.isOpenNow({ is_open_now: true, is_accepting_orders: false }), true);
+});
+
+check("مغلق بحسب الخادم دون سبب لا يُعرض مفتوحاً", () => {
+  assert.equal(status.branchStatusOf({ is_open_now: false, closed_reason: null }), "unknown");
+  assert.equal(status.branchStatusOf({ is_open_now: false }), "unknown");
+});
+
+check("بلا is_open_now يُرجع إلى الفتح اليدوي وإلى closed_reason", () => {
+  assert.equal(status.isOpenNow({ is_accepting_orders: true }), true);
+  assert.equal(status.isOpenNow({ is_accepting_orders: false }), false);
+  assert.equal(status.isOpenNow({}), false);
+  assert.equal(status.statusFrom(undefined, "outside_opening_hours"), "outsideHours");
+  assert.equal(status.statusFrom(false, "no_payment_methods"), "noPaymentMethods");
+  assert.equal(status.statusFrom(true, undefined), "open");
+});
+
 check("closedReasonStatus يقرأ القيمة وحدها كما تأتي في by_branch", () => {
   assert.equal(status.closedReasonStatus(null), "open");
   assert.equal(status.closedReasonStatus("no_order_types"), "noOrderTypes");

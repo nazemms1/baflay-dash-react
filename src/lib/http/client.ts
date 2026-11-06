@@ -53,6 +53,11 @@ api.interceptors.response.use(
     if (apiError.status === 401 && getStoredToken()) {
       onSessionExpired?.();
       toast.error(i18n.t("errors.sessionExpired"));
+    } else if (apiError.status === 403 && apiError.code === "outside_your_branch") {
+      // مدير الفرع يعدّل فرعه وحده. هذا ليس نقص صلاحية يُصلحه تسجيل الدخول، فرسالة عادية بلا زر.
+      if (!(axios.isAxiosError(error) && error.config?.silentError)) {
+        toast.error(i18n.t("errors.outsideYourBranch"), { id: "outside-your-branch" });
+      }
     } else if (apiError.status === 403) {
       // نقص الصلاحية: رسالة مترجمة تبقى ظاهرة مع زر يعيد المستخدم إلى تسجيل الدخول.
       toast.warning(i18n.t("errors.forbidden"), {
