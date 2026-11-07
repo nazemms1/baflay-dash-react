@@ -44,4 +44,11 @@ check("غياب الحقل أو غياب صف الصنف يبقي الكومبو
   assert.equal(combo.comboAllowed(undefined), true);
 });
 
+check("المفتاح وحده يقرّر: meal_price لا يغيّر شيئاً في ظهور الوجبة", () => {
+  assert.equal(combo.comboAllowed({ has_combo: true, meal_price: null }), true);
+  assert.equal(combo.comboAllowed({ has_combo: true, meal_price: "8000.00" }), true);
+  assert.equal(combo.comboAllowed({ has_combo: false, meal_price: "8000.00" }), false);
+  assert.equal(combo.comboAllowed({ has_combo: false, meal_price: null }), false);
+});
+
 console.log(`\n${passed} tests passed`);

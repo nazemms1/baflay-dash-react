@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type ComponentType, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { containsFile, toFormData } from "@/lib/form-data";
 import { buildPayload, defaultValues, rangeErrors, requiredErrors, serverErrors } from "./payload";
 import { groupFields } from "./groups";
 import { LocationField } from "./LocationField";
-import { isRemoteSource, type CrudModule, type FieldDef, type OptionSource, type RemoteSource, type RowColumn, type Values } from "./types";
+import { isRemoteSource, type CrudModule, type FieldDef, type OptionSource, type RemoteSource, type RowColumn, type RowExtraProps, type Values } from "./types";
 
 type RecordLike = Record<string, unknown>;
 
@@ -128,6 +128,9 @@ function RowsField({
   newRow,
   rows,
   sortable,
+  rowExtra: RowExtra,
+  rowExtraHint,
+  record,
   onChange,
   error,
 }: {
@@ -136,6 +139,9 @@ function RowsField({
   newRow: RecordLike;
   rows: RecordLike[];
   sortable?: boolean;
+  rowExtra?: ComponentType<RowExtraProps>;
+  rowExtraHint?: string;
+  record: RecordLike | null;
   onChange: (rows: RecordLike[]) => void;
   error?: string;
 }) {
@@ -169,6 +175,7 @@ function RowsField({
       {sortable && rows.length > 1 && (
         <p className="text-xs text-muted">{t("crud.dragHint")}</p>
       )}
+      {RowExtra && rowExtraHint && <p className="text-xs text-muted">{rowExtraHint}</p>}
 
       {rows.map((row, index) => (
         <div
@@ -281,6 +288,15 @@ function RowsField({
             );
           })}
           </div>
+          {RowExtra && (
+            <RowExtra
+              row={row}
+              record={record}
+              onPatch={(patch) =>
+                onChange(rows.map((item, position) => (position === index ? { ...item, ...patch } : item)))
+              }
+            />
+          )}
           <button
             type="button"
             aria-label={t("crud.removeRow")}
@@ -598,6 +614,9 @@ export function RecordForm<T extends { id: number | string }>({
             columns={field.columns}
             newRow={field.newRow}
             sortable={field.sortable}
+            rowExtra={field.rowExtra}
+            rowExtraHint={field.rowExtraHint}
+            record={(record as RecordLike | null) ?? null}
             rows={(values[field.key] as RecordLike[]) ?? []}
             onChange={(rows) => set(field.key, rows)}
             error={error}

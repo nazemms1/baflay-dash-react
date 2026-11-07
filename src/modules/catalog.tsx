@@ -2,6 +2,7 @@ import type { TFunction } from "i18next";
 import type { CrudModule, FieldDef, Values } from "@/components/crud/types";
 import { defaultValues } from "@/components/crud/payload";
 import { ItemAddonsAction } from "@/features/items/ItemAddonsAction";
+import { ItemComboToggle } from "@/features/menus/ItemComboToggle";
 import { MenuDetails } from "@/features/menus/MenuDetails";
 import { MenuRowActions } from "@/features/menus/MenuRowActions";
 import { CityForm } from "@/features/geography/CityForm";
@@ -278,7 +279,7 @@ export const itemsModule = (t: TFunction): CrudModule<Named> => ({
       ],
       // لكل قائمة يُضاف إليها الصنف سعرها ووحدتها، فلا سعر واحد يصلح لكل القوائم.
       newRow: { menu_id: null, price: null, currency: null },
-      // سعر الوجبة لكل قائمة: يظهر في التفاصيل فقط، ويحدده الخادم من إعدادات القائمة.
+      // سعر الوجبة قيمة محفوظة لكل صنف في كل قائمة، ويظهر في التفاصيل فقط. وفارغه يعني أن الصنف لا يُباع وجبة في هذا الفرع.
       viewColumns: [{ key: "meal_price", label: t("crud.field.mealPrice"), kind: "number" }],
     },
   ],
@@ -387,6 +388,9 @@ const menuFields = (t: TFunction): FieldDef[] => [
       { key: "price", label: t("crud.field.price"), kind: "number", required: true },
     ],
     newRow: { item_id: null, price: null, order: 1 },
+    // مفتاح الكومبو بجانب كل صنف محفوظ، ويحفظ نفسه فور تحريكه.
+    rowExtra: ItemComboToggle,
+    rowExtraHint: t("itemCombo.formHint"),
   },
 ];
 

@@ -757,7 +757,7 @@
     "combo": "Combo",
     "extras": "Brand extras",
     "suggestions": "Suggestions",
-    "comboHint": "The combo price is added on top of the sandwich price. Leave empty if this branch sells no combo.",
+    "comboHint": "The combo price is added on top of the sandwich price. Leave empty if this branch sells no combo. To exclude an item from it, use the “Combo” switch next to the item in the menu edit form.",
     "comboPrice": "Combo price",
     "comboName": "Combo name",
     "saved": "Settings saved",
@@ -1166,7 +1166,8 @@
     "toggle": "Combo option for this item",
     "on": "On",
     "off": "Off",
-    "saved": "Combo setting saved"
+    "saved": "Combo setting saved",
+    "formHint": "The “Combo” switch next to each item saves as soon as you move it, without waiting for “Save”. It shows for items already in the menu when the menu has a combo price."
   },
   "itemAvailability": {
     "toggle": "Item availability in this menu",

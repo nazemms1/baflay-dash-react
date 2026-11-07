@@ -48,6 +48,13 @@ type Common = {
   readOnly?: boolean;
 };
 
+/** ما تستلمه الخلية الإضافية في صف: الصف نفسه، والسجل الذي يُعدَّل (`null` عند الإنشاء)، وتعديل الصف. */
+export interface RowExtraProps {
+  row: Record<string, unknown>;
+  record: Record<string, unknown> | null;
+  onPatch: (patch: Record<string, unknown>) => void;
+}
+
 export type FieldDef =
   | (Common & {
       kind: "text" | "email" | "phone" | "number" | "password";
@@ -95,6 +102,13 @@ export type FieldDef =
        * للصنف في القائمة، وهو قيمة يحددها الخادم ولا يعدّلها المستخدم هنا.
        */
       viewColumns?: RowColumn[];
+      /**
+       * خلية إضافية في كل صف بعد الأعمدة، كمفتاح كومبو الصنف. لا تدخل الحمولة ولا تنتظر زر «حفظ»:
+       * تحفظ نفسها بطلبها الخاص، وتعدّل الصف في النموذج عبر `onPatch` ليبقى معه إن تغيّر ترتيبه.
+       */
+      rowExtra?: ComponentType<RowExtraProps>;
+      /** تلميح تحت عنوان الصفوف يشرح الخلية الإضافية. */
+      rowExtraHint?: string;
     })
   | (Common & {
       /**

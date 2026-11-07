@@ -11,7 +11,6 @@ const REFUSAL_KEYS: Record<string, string> = {
   delivery_paused: "orderRefusal.deliveryPaused",
   pickup_paused: "orderRefusal.pickupPaused",
   delivery_only: "orderRefusal.deliveryOnly",
-  combo_not_offered: "orderRefusal.comboNotOffered",
   cash_paused: "orderRefusal.cashPaused",
   card_paused: "orderRefusal.cardPaused",
   outside_your_branch: "orderRefusal.outsideYourBranch",
@@ -49,6 +48,11 @@ export function orderRefusalMessage(error: unknown, t: TFunction, fallback: stri
 
   if (apiError.code === "branch_closed") {
     return branchClosedMessage(toText(data.closed_reason), apiError.message, t);
+  }
+
+  if (apiError.code === "combo_not_offered") {
+    // رسالة الخادم مترجمة وتذكر اسم الصنف («لا يتوفر كولا كوجبة في هذا الفرع…»)، وهي أوضح من نص ثابت.
+    return toText(apiError.details.message).trim() || t("orderRefusal.comboNotOffered");
   }
 
   if (apiError.code === "below_minimum_order") {
