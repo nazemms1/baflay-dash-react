@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { ShoppingBag, Truck, type LucideIcon } from "lucide-react";
 import { usePermissions } from "@/features/auth/hooks";
 import { branchApi, type Named } from "@/services";
+import { notifySaved } from "./onlineOrdersNotice";
 
 export type OrderType = "delivery" | "pickup";
 
@@ -45,8 +45,8 @@ const ORDER_TYPES: Record<OrderType, OrderTypeConfig> = {
 
 /**
  * زر تشغيل نوع طلب في صف الفرع: التوصيل أو الاستلام من الفرع. الإيقاف لا يمسّ مسافة التوصيل
- * ولا رسومه، ولا يلغي الطلبات الجارية. يجوز إيقاف النوعين معاً، فيُغلق الفرع أمام الطلبات
- * الإلكترونية (`closed_reason: no_order_types`) ويبقى الكاشير يعمل.
+ * ولا رسومه، ولا يلغي الطلبات الجارية. يجوز إيقاف النوعين معاً: يبقى الفرع مفتوحاً (للناس في المحل
+ * والكاشير) ويقف الطلب الأونلاين وحده (`accepts_online_orders: false`، السبب `no_order_types`).
  */
 export function OrderTypeToggle({ row, type }: { row: Named; type: OrderType }) {
   const { t } = useTranslation();
@@ -57,8 +57,8 @@ export function OrderTypeToggle({ row, type }: { row: Named; type: OrderType }) 
 
   const save = useMutation({
     mutationFn: (next: boolean) => config.save(row.id, next),
-    onSuccess: async () => {
-      toast.success(t(config.savedKey));
+    onSuccess: async (result) => {
+      notifySaved(result, t(config.savedKey), t);
       await queryClient.invalidateQueries({ queryKey: ["branches"] });
     },
     // خطأ الخادم يعرضه معترض الطلبات العام، فلا نكرر الإشعار هنا.

@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { Banknote, CreditCard, type LucideIcon } from "lucide-react";
 import { usePermissions } from "@/features/auth/hooks";
 import { branchApi, type Named } from "@/services";
+import { notifySaved } from "./onlineOrdersNotice";
 
 export type PaymentMethod = "cash" | "card";
 
@@ -40,7 +40,8 @@ const PAYMENT_METHODS_PERMISSION = "branches.payment.methods.update";
 
 /**
  * زر قبول طريقة دفع في صف الفرع: النقد أو البطاقة. البطاقة معطّلة للفرع الذي لا حساب إلكترونياً له.
- * يجوز إيقاف الطريقتين معاً، فيُغلق الفرع أمام الطلبات الإلكترونية (`closed_reason: no_payment_methods`).
+ * يجوز إيقاف الطريقتين معاً: يبقى الفرع مفتوحاً ويقف الطلب الأونلاين وحده
+ * (`accepts_online_orders: false`، السبب `no_payment_methods`).
  */
 export function PaymentMethodToggle({ row, method }: { row: Named; method: PaymentMethod }) {
   const { t } = useTranslation();
@@ -52,8 +53,8 @@ export function PaymentMethodToggle({ row, method }: { row: Named; method: Payme
 
   const save = useMutation({
     mutationFn: (next: boolean) => config.save(row.id, next),
-    onSuccess: async () => {
-      toast.success(t("paymentMethods.saved"));
+    onSuccess: async (result) => {
+      notifySaved(result, t("paymentMethods.saved"), t);
       await queryClient.invalidateQueries({ queryKey: ["branches"] });
     },
     // خطأ الخادم يعرضه معترض الطلبات العام، فلا نكرر الإشعار هنا.

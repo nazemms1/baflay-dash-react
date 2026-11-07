@@ -2,10 +2,11 @@ import { useTranslation } from "react-i18next";
 import { Badge, type Tone } from "@/components/ui/Badge";
 import { toText } from "@/lib/coerce";
 import type { Named } from "@/services";
-import { branchStatusOf, isOpenNow, localClock, type BranchStatus } from "./branchStatus";
+import { branchStatusOf, isOpenNow, localClock, onlineReasonOf, type BranchStatus } from "./branchStatus";
 
 const TONE: Record<BranchStatus, Tone> = {
   open: "ok",
+  openNoOnline: "warn",
   closedByBranch: "danger",
   outsideHours: "warn",
   noOrderTypes: "danger",
@@ -58,6 +59,13 @@ export function BranchStatusBadge({ row }: { row: Named }) {
   if (status === "open") {
     const closes = localClock(row.closes_at, row.timezone);
     return <BranchStatusPill status={status} label={closes ? t("branchStatus.openUntil", { time: closes }) : undefined} />;
+  }
+
+  // مفتوح للناس في المحل، والطلب الأونلاين واقف: السبب عند المرور على الشارة.
+  if (status === "openNoOnline") {
+    const why = onlineReasonOf(row);
+    const detail = why ? t(`branchStatus.onlineReason.${why}`, { defaultValue: "" }) : "";
+    return <BranchStatusPill status={status} detail={detail || undefined} />;
   }
 
   // سبب الإغلاق اليدوي يكتبه الفرع نفسه، فيُعرض لمن يمرّ على الشارة.

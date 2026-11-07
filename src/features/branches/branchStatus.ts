@@ -4,6 +4,7 @@
  */
 export type BranchStatus =
   | "open"
+  | "openNoOnline"
   | "closedByBranch"
   | "outsideHours"
   | "noOrderTypes"
@@ -21,25 +22,50 @@ export function isOpenNow(row: Record<string, unknown>): boolean {
 }
 
 /**
- * حالة الفرع من `is_open_now` و`closed_reason` معاً. `is_open_now` هو الأساس: true يعني مفتوحاً مهما كان
- * السبب. وإن كان false فالسبب هو `closed_reason`: `closed_by_branch` أغلقه الفرع يدوياً،
- * و`outside_opening_hours` برّا الدوام، و`no_order_types` التوصيل والاستلام مطفيان معاً،
- * و`no_payment_methods` النقد والبطاقة مطفيان معاً، و`hidden` مخفي. وسبب لا نعرفه أو غائب يبقى `unknown`،
- * ولا يُعدّ مفتوحاً أبداً حين يقول الخادم إنه مغلق.
+ * حالة الفرع من `is_open_now` و`closed_reason` و`accepts_online_orders`. `is_open_now` هو الأساس: true يعني
+ * أن الفرع مفتوح (الفتح اليدوي وأوقات الدوام معاً)، حتى لو كان التوصيل والاستلام مطفيين. في هذه الحالة
+ * يبقى الفرع مفتوحاً للناس في المحل والكاشير، ويقف الطلب الأونلاين وحده: `accepts_online_orders = false`.
+ * وإن كان `is_open_now` false فالسبب هو `closed_reason`: `closed_by_branch` أغلقه الفرع يدوياً،
+ * و`outside_opening_hours` برّا الدوام، و`hidden` مخفي. وسبب لا نعرفه أو غائب يبقى `unknown`، ولا يُعدّ
+ * مفتوحاً أبداً حين يقول الخادم إنه مغلق.
  */
 export function branchStatusOf(row: Record<string, unknown>): BranchStatus {
-  return statusFrom(row.is_open_now, row.closed_reason);
+  return statusFrom(row.is_open_now, row.closed_reason, row.accepts_online_orders);
 }
 
-/** نفس التحويل لقيمتين مفردتين، كالتي تأتي في `by_branch` للوحة العمليات. */
-export function statusFrom(openNow: unknown, reason: unknown): BranchStatus {
-  if (openNow === true) return "open";
+/**
+ * نفس التحويل لقيم مفردة، كالتي تأتي في `by_branch` للوحة العمليات. `acceptsOnline` اختياري: false الصريحة
+ * وحدها تجعل الفرع المفتوح «بدون طلب أونلاين».
+ */
+export function statusFrom(openNow: unknown, reason: unknown, acceptsOnline?: unknown): BranchStatus {
+  if (openNow === true) return acceptsOnline === false ? "openNoOnline" : "open";
   const status = closedReasonStatus(reason);
   // مغلق بحسب الخادم لكن السبب `null`: تناقض لا نعرف تفسيره، فلا نعرضه مفتوحاً.
   return openNow === false && status === "open" ? "unknown" : status;
 }
 
-/** نفس التحويل لقيمة `closed_reason` وحدها، كالتي تأتي في `by_branch` للوحة العمليات. */
+/**
+ * سبب توقف الطلب الأونلاين كما يرجع في `online_orders_unavailable_reason`: `no_order_types` (التوصيل
+ * والاستلام مطفيان) أو `no_payment_methods` (الكاش والبطاقة مطفيان). `null` إن لم يتوقف أو لم يُرسل السبب.
+ */
+export function onlineReasonOf(row: Record<string, unknown>): string | null {
+  const reason = row.online_orders_unavailable_reason;
+  return typeof reason === "string" && reason !== "" ? reason : null;
+}
+
+/**
+ * هل أوقف الحفظ الطلب الأونلاين؟ ردّ مفاتيح التوصيل والاستلام والدفع يحمل `accepts_online_orders`
+ * و`online_orders_unavailable_reason`، داخل `data` أو في الجذر. `stopped` true فقط إن قال الخادم false صراحةً،
+ * فغياب الحقل لا يُفسَّر توقفاً.
+ */
+export function onlineStopOf(result: unknown): { stopped: boolean; reason: string | null } {
+  const body = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
+  const data = body.data && typeof body.data === "object" ? (body.data as Record<string, unknown>) : body;
+  return { stopped: data.accepts_online_orders === false, reason: onlineReasonOf(data) };
+}
+
+/**
+ * نفس التحويل لقيمة `closed_reason` وحدها، كالتي تأتي في `by_branch` للوحة العمليات. */
 export function closedReasonStatus(reason: unknown): BranchStatus {
   switch (reason) {
     case null:
@@ -48,6 +74,8 @@ export function closedReasonStatus(reason: unknown): BranchStatus {
       return "closedByBranch";
     case "outside_opening_hours":
       return "outsideHours";
+    // قديم: خادم لم يُحدَّث بعد كان يُغلق الفرع حين يُطفأ التوصيل والاستلام أو الكاش والبطاقة. الخادم الجديد
+    // يُبقيه مفتوحاً ويوقف الأونلاين وحده (`accepts_online_orders`).
     case "no_order_types":
       return "noOrderTypes";
     case "no_payment_methods":

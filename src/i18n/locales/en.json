@@ -529,7 +529,7 @@
     "showingOf": "Showing {{shown}} of {{total}}",
     "loadMore": "Load more",
     "deliveryOn": "Delivery",
-    "deliveryOff": "Pickup only",
+    "deliveryOff": "Delivery off",
     "cropImage": "Crop image"
   },
   "surveys": {
@@ -1103,7 +1103,7 @@
   "orderTypes": {
     "pickupField": "Pickup at branch",
     "pickupOn": "Pickup",
-    "pickupOff": "Delivery only",
+    "pickupOff": "Pickup off",
     "pickupSaved": "Pickup availability saved"
   },
   "paymentMethods": {
@@ -1118,6 +1118,11 @@
     "column": "Status now",
     "open": "Open",
     "openUntil": "Open until {{time}}",
+    "openNoOnline": "Open now, no orders",
+    "onlineReason": {
+      "no_order_types": "Delivery and pickup are both off",
+      "no_payment_methods": "Cash and card are both off"
+    },
     "closedByBranch": "Closed by branch",
     "outsideHours": "Outside opening hours",
     "opensAt": "Opens at {{time}}",
@@ -1161,6 +1166,9 @@
       "friday": "Friday"
     }
   },
+  "onlineOrders": {
+    "stopped": "Saved. The branch is still open, but online ordering is stopped."
+  },
   "itemCombo": {
     "label": "Combo",
     "toggle": "Combo option for this item",
@@ -1187,8 +1195,9 @@
     "belowMinimumOrder": "The minimum order is {{min}}. Add {{missing}} to complete the order.",
     "outsideYourBranch": "This is not your branch, so you can't work on it.",
     "branchClosed": "This branch is closed right now.",
-    "branchClosedNoOrderTypes": "This branch is not accepting delivery or pickup orders right now.",
-    "branchClosedNoPaymentMethods": "This branch is not accepting any payment method right now.",
+    "onlineUnavailable": "Online ordering is not available from this branch right now.",
+    "onlineUnavailableNoOrderTypes": "Online ordering is not available from this branch right now, because delivery and pickup are both off.",
+    "onlineUnavailableNoPaymentMethods": "Online ordering is not available from this branch right now, because no payment method is on.",
     "extraNotOffered": "Some extras are no longer offered at this branch. Choose them again, or reload the page."
   },
   "receipt": {

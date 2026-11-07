@@ -529,7 +529,7 @@
     "showingOf": "يعرض {{shown}} من {{total}}",
     "loadMore": "عرض المزيد",
     "deliveryOn": "توصيل",
-    "deliveryOff": "استلام فقط",
+    "deliveryOff": "التوصيل متوقف",
     "cropImage": "قص الصورة"
   },
   "surveys": {
@@ -1104,7 +1104,7 @@
   "orderTypes": {
     "pickupField": "الاستلام من الفرع",
     "pickupOn": "استلام",
-    "pickupOff": "توصيل فقط",
+    "pickupOff": "الاستلام متوقف",
     "pickupSaved": "تم حفظ حالة الاستلام"
   },
   "paymentMethods": {
@@ -1119,6 +1119,11 @@
     "column": "الحالة الآن",
     "open": "مفتوح",
     "openUntil": "مفتوح حتى {{time}}",
+    "openNoOnline": "مفتوح الآن من دون طلبات",
+    "onlineReason": {
+      "no_order_types": "التوصيل والاستلام مطفيان",
+      "no_payment_methods": "الكاش والبطاقة مطفيان"
+    },
     "closedByBranch": "مغلق يدوياً",
     "outsideHours": "خارج أوقات الدوام",
     "opensAt": "يفتح {{time}}",
@@ -1162,6 +1167,9 @@
       "friday": "الجمعة"
     }
   },
+  "onlineOrders": {
+    "stopped": "تم الحفظ. الفرع ما زال مفتوحاً، لكن الطلب الأونلاين متوقف."
+  },
   "itemCombo": {
     "label": "الكومبو",
     "toggle": "خيار الكومبو لهذا الصنف",
@@ -1188,8 +1196,9 @@
     "belowMinimumOrder": "الحد الأدنى للطلب {{min}}. أضف {{missing}} لإتمام الطلب.",
     "outsideYourBranch": "هذا الفرع ليس فرعك، ولا يمكنك العمل عليه.",
     "branchClosed": "هذا الفرع مغلق حالياً.",
-    "branchClosedNoOrderTypes": "هذا الفرع لا يستقبل طلبات توصيل أو استلام حالياً.",
-    "branchClosedNoPaymentMethods": "هذا الفرع لا يقبل أي طريقة دفع حالياً.",
+    "onlineUnavailable": "الطلب أونلاين غير متاح حالياً من هذا الفرع.",
+    "onlineUnavailableNoOrderTypes": "الطلب أونلاين غير متاح حالياً من هذا الفرع، لأن التوصيل والاستلام مطفيان.",
+    "onlineUnavailableNoPaymentMethods": "الطلب أونلاين غير متاح حالياً من هذا الفرع، لأن الدفع غير متاح.",
     "extraNotOffered": "بعض الإضافات لم تعد متاحة في هذا الفرع. أعد اختيارها، أو أعد تحميل الصفحة."
   },
   "receipt": {

@@ -157,13 +157,22 @@ function toOfferedTypes(value: unknown): OrderTypeName[] {
   return (["delivery", "pickup"] as const).filter((type) => offered.includes(type));
 }
 
+/**
+ * هل يقبل الفرع طلباً أونلاين؟ `accepts_online_orders` إن وصل. وإن لم يصل فالفرع الذي لا يعرض أي نوع طلب
+ * (`offered_order_types` فارغة) لا يقبل أونلاين حتماً. وغير ذلك مجهول، فلا نقول شيئاً.
+ */
+function toAcceptsOnline(row: UnknownRecord): boolean | undefined {
+  if (typeof row.accepts_online_orders === "boolean") return row.accepts_online_orders;
+  return Array.isArray(row.offered_order_types) && row.offered_order_types.length === 0 ? false : undefined;
+}
+
 function toBranchLoad(row: UnknownRecord): BranchLoad {
   return {
     name: toText(row.name),
     openOrders: toNumber(row.open_orders),
     lateOrders: toNumber(row.late_orders),
     oldestMinutes: toNumber(row.oldest_minutes),
-    status: statusFrom(row.is_open_now, row.closed_reason),
+    status: statusFrom(row.is_open_now, row.closed_reason, toAcceptsOnline(row)),
     offeredOrderTypes: toOfferedTypes(row.offered_order_types),
   };
 }

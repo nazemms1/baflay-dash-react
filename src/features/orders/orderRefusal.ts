@@ -24,17 +24,20 @@ const amountText = (value: unknown, currency: string): string => {
   return currency ? `${digits} ${currency}` : digits;
 };
 
-/** نص رفض الإغلاق حسب `data.closed_reason`: كل سبب بنصه، وبرّا الدوام برسالة الخادم لأنها تذكر اليوم والوقت. */
+/** نص رفض الإغلاق حسب `data.closed_reason`: برّا الدوام برسالة الخادم لأنها تذكر اليوم والوقت، وغيره نص ثابت. */
 function branchClosedMessage(reason: string, serverMessage: string, t: TFunction): string {
+  return reason === "outside_opening_hours" && serverMessage ? serverMessage : t("orderRefusal.branchClosed");
+}
+
+/** الطلب الأونلاين واقف والفرع مفتوح: السبب في `data.reason`. */
+function onlineUnavailableMessage(reason: string, t: TFunction): string {
   switch (reason) {
-    case "outside_opening_hours":
-      return serverMessage || t("orderRefusal.branchClosed");
     case "no_order_types":
-      return t("orderRefusal.branchClosedNoOrderTypes");
+      return t("orderRefusal.onlineUnavailableNoOrderTypes");
     case "no_payment_methods":
-      return t("orderRefusal.branchClosedNoPaymentMethods");
+      return t("orderRefusal.onlineUnavailableNoPaymentMethods");
     default:
-      return t("orderRefusal.branchClosed");
+      return t("orderRefusal.onlineUnavailable");
   }
 }
 
@@ -48,6 +51,11 @@ export function orderRefusalMessage(error: unknown, t: TFunction, fallback: stri
 
   if (apiError.code === "branch_closed") {
     return branchClosedMessage(toText(data.closed_reason), apiError.message, t);
+  }
+
+  // الفرع مفتوح لكن الطلب الأونلاين واقف: رمز مستقل عن `branch_closed`، والسبب في `data.reason`.
+  if (apiError.code === "online_ordering_unavailable") {
+    return onlineUnavailableMessage(toText(data.reason), t);
   }
 
   if (apiError.code === "combo_not_offered") {

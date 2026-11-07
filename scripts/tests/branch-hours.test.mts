@@ -154,7 +154,7 @@ check("حالة الفرع تُقرأ من closed_reason كما يعيدها ا�
   assert.equal(status.branchStatusOf({ closed_reason: "hidden" }), "hidden");
 });
 
-check("التوصيل والاستلام مطفيان معاً، أو النقد والبطاقة معاً: الفرع مغلق بسببه", () => {
+check("خادم لم يُحدَّث بعد: التوصيل والاستلام مطفيان معاً أو النقد والبطاقة معاً يُغلق الفرع بسببه", () => {
   assert.equal(status.branchStatusOf({ closed_reason: "no_order_types" }), "noOrderTypes");
   assert.equal(status.branchStatusOf({ closed_reason: "no_payment_methods" }), "noPaymentMethods");
 });
@@ -164,8 +164,8 @@ check("الحقل الغائب أو السبب غير المعروف لا يُف
   assert.equal(status.branchStatusOf({ closed_reason: "something_new" }), "unknown");
 });
 
-check("is_open_now هو الأساس: فرع يقبل الطلبات يدوياً لكنه مغلق لأن التوصيل والاستلام مطفيان", () => {
-  // كما يرجع الخادم لفرع حلب - غولدن مول.
+check("خادم لم يُحدَّث بعد: فرع حلب - غولدن مول يقبل يدوياً لكنه مغلق لأن التوصيل والاستلام مطفيان", () => {
+  // كما كان يرجع الخادم القديم لهذا الفرع.
   const row = { is_accepting_orders: true, is_open_now: false, closed_reason: "no_order_types" };
   assert.equal(status.isOpenNow(row), false);
   assert.equal(status.branchStatusOf(row), "noOrderTypes");
@@ -189,6 +189,75 @@ check("بلا is_open_now يُرجع إلى الفتح اليدوي وإلى clo
   assert.equal(status.statusFrom(undefined, "outside_opening_hours"), "outsideHours");
   assert.equal(status.statusFrom(false, "no_payment_methods"), "noPaymentMethods");
   assert.equal(status.statusFrom(true, undefined), "open");
+});
+
+check("التوصيل والاستلام مطفيان: الفرع يبقى مفتوحاً ويقف الطلب الأونلاين وحده", () => {
+  // كما يرجع الخادم الجديد: زر الفتح والدوام وحدهما يحددان is_open_now.
+  const row = {
+    is_open_now: true,
+    closed_reason: null,
+    accepts_online_orders: false,
+    online_orders_unavailable_reason: "no_order_types",
+  };
+  assert.equal(status.branchStatusOf(row), "openNoOnline");
+  assert.equal(status.isOpenNow(row), true);
+  assert.equal(status.onlineReasonOf(row), "no_order_types");
+});
+
+check("ردّ فرع دمشق - المزة الفعلي: مفتوح الآن، التوصيل والاستلام مطفيان، فلا طلبات أونلاين", () => {
+  const row = {
+    is_accepting_orders: true,
+    is_accepting_delivery: false,
+    is_accepting_pickup: false,
+    offered_order_types: [],
+    is_open_now: true,
+    closed_reason: null,
+    closes_at: "2026-11-08T01:00:00+03:00",
+    timezone: "Asia/Damascus",
+    accepts_online_orders: false,
+    online_orders_unavailable_reason: "no_order_types",
+  };
+  assert.equal(status.isOpenNow(row), true);
+  assert.equal(status.branchStatusOf(row), "openNoOnline");
+  assert.equal(status.onlineReasonOf(row), "no_order_types");
+});
+
+check("الكاش والبطاقة مطفيان: الفرع مفتوح بلا أونلاين، والسبب مختلف", () => {
+  const row = { is_open_now: true, accepts_online_orders: false, online_orders_unavailable_reason: "no_payment_methods" };
+  assert.equal(status.branchStatusOf(row), "openNoOnline");
+  assert.equal(status.onlineReasonOf(row), "no_payment_methods");
+});
+
+check("الفرع المفتوح الذي يقبل الأونلاين أو لا يرسل الحقل يبقى «مفتوح»", () => {
+  assert.equal(status.branchStatusOf({ is_open_now: true, accepts_online_orders: true }), "open");
+  assert.equal(status.branchStatusOf({ is_open_now: true }), "open");
+  assert.equal(status.onlineReasonOf({ is_open_now: true, accepts_online_orders: true }), null);
+});
+
+check("المغلق لا يصير «مفتوح بلا أونلاين»: برّا الدوام أو يدوياً يغلبان accepts_online_orders", () => {
+  assert.equal(status.branchStatusOf({ is_open_now: false, closed_reason: "outside_opening_hours", accepts_online_orders: false }), "outsideHours");
+  assert.equal(status.branchStatusOf({ is_open_now: false, closed_reason: "closed_by_branch", accepts_online_orders: false }), "closedByBranch");
+  assert.equal(status.statusFrom(false, null, false), "unknown");
+});
+
+check("statusFrom يقبل accepts_online_orders لقيم مفردة كما في by_branch", () => {
+  assert.equal(status.statusFrom(true, null, false), "openNoOnline");
+  assert.equal(status.statusFrom(true, null, true), "open");
+  assert.equal(status.statusFrom(true, null), "open");
+});
+
+check("ردّ حفظ المفتاح: توقف الأونلاين يُقرأ من data أو من الجذر، وغياب الحقل ليس توقفاً", () => {
+  assert.deepEqual(
+    status.onlineStopOf({ status: true, data: { is_open_now: true, accepts_online_orders: false, online_orders_unavailable_reason: "no_order_types" } }),
+    { stopped: true, reason: "no_order_types" }
+  );
+  assert.deepEqual(
+    status.onlineStopOf({ accepts_online_orders: false, online_orders_unavailable_reason: "no_payment_methods" }),
+    { stopped: true, reason: "no_payment_methods" }
+  );
+  assert.deepEqual(status.onlineStopOf({ data: { accepts_online_orders: true } }), { stopped: false, reason: null });
+  assert.deepEqual(status.onlineStopOf({ data: {} }), { stopped: false, reason: null });
+  assert.deepEqual(status.onlineStopOf(null), { stopped: false, reason: null });
 });
 
 check("closedReasonStatus يقرأ القيمة وحدها كما تأتي في by_branch", () => {
