@@ -18,6 +18,34 @@ export const surveys = createResource<Named>("surveys");
 export const contactUs = createResource<Named>("contact-us");
 export const branches = createResource<Named>("branches");
 
+/** صورة تصنيف داخل فرع: الصورة المعروضة، والعامة، وصورة الفرع الخاصة إن وُجدت. */
+export interface BranchCategoryImage extends RawBilingual {
+  id: number;
+  /** هل يبيع الفرع شيئاً من هذا التصنيف الآن. */
+  on_menu: boolean;
+  /** الصورة التي تظهر للزبون: صورة الفرع إن وُجدت، وإلا العامة، وفارغة إن لم توجد أيٌّ منهما. */
+  image: string;
+  /** الصورة العامة للتصنيف، وفارغة إن لم تُرفع. */
+  default_image: string;
+  /** صورة الفرع الخاصة، و`null` إن لم يرفع الفرع صورة. */
+  branch_image: string | null;
+}
+
+/** كل تصنيفات الفرع بترتيب الفرع نفسه. */
+export interface BranchCategoryImages {
+  branch_id: number;
+  categories: BranchCategoryImage[];
+}
+
+/** ما يعيده الخادم بعد رفع صورة الفرع لتصنيف أو حذفها. */
+export interface BranchCategoryImageChange {
+  branch_id: number;
+  category_id: number;
+  image: string;
+  default_image: string;
+  branch_image: string | null;
+}
+
 // ── الفروع: ترتيب التصنيفات داخل فرع، والكومبو العام للفرع ───────────────
 export const branchApi = {
   publicGet: (id: Id, signal?: AbortSignal) =>
@@ -55,6 +83,28 @@ export const branchApi = {
   /** جدول الدوام الأسبوعي. الأيام السبعة كلها في الجسم، و`opening_hours: null` يلغي الجدول. */
   setOpeningHours: (branchId: Id, body: Record<string, unknown>) =>
     api.put(`branches/${branchId}/opening-hours`, body).then((response) => response.data as unknown),
+
+  /** صور تصنيفات الفرع كلها، بترتيب الفرع، ومعها `on_menu` لما يبيعه الفرع الآن. */
+  categoryImages: (branchId: Id, signal?: AbortSignal) =>
+    api
+      .get(`branches/${branchId}/categories/images`, { signal })
+      .then((response) => unwrapData<BranchCategoryImages>(response.data)),
+
+  /** رفع صورة خاصة بالفرع لتصنيف، أو تبديلها. الملف يذهب بـ `POST` مع `_method=PUT` كبقية الملفات. */
+  uploadCategoryImage: (branchId: Id, categoryId: Id, file: File) => {
+    const form = new FormData();
+    form.append("_method", "PUT");
+    form.append("image", file);
+    return api
+      .post(`branches/${branchId}/categories/${categoryId}/image`, form)
+      .then((response) => unwrapData<BranchCategoryImageChange>(response.data));
+  },
+
+  /** حذف صورة الفرع للتصنيف، فيعود الفرع إلى الصورة العامة. */
+  resetCategoryImage: (branchId: Id, categoryId: Id) =>
+    api
+      .delete(`branches/${branchId}/categories/${categoryId}/image`)
+      .then((response) => unwrapData<BranchCategoryImageChange>(response.data)),
 };
 
 // ── الأصناف: الإضافات التي يقبلها الصنف ─────────────────────────────────

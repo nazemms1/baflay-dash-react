@@ -780,6 +780,25 @@
     "saved": "Category order saved",
     "empty": "This branch has no categories."
   },
+  "categoryImages": {
+    "open": "Category images",
+    "title": "Category images: {{name}}",
+    "hint": "Each branch can have its own image for a category. A branch without one shows the general category image.",
+    "empty": "This branch has no categories.",
+    "onMenu": "Selling now",
+    "notOnMenu": "Not selling now",
+    "source": {
+      "branch": "Branch image",
+      "default": "General image",
+      "none": "No image"
+    },
+    "upload": "Upload image",
+    "change": "Change image",
+    "reset": "Use general image",
+    "resetConfirm": "The branch image for \"{{name}}\" will be deleted and the branch will show the general image. Continue?",
+    "uploaded": "Category image saved for this branch",
+    "resetDone": "The branch is back to the general image"
+  },
   "access": {
     "open": "User access",
     "title": "Access: {{name}}",
@@ -1023,6 +1042,8 @@
       "delete": "Delete",
       "restore": "Restore",
       "order": "Sort order",
+      "images": "Images",
+      "image": "Image",
       "availability": "Availability",
       "delivery": "Delivery",
       "pickup": "Pickup",
