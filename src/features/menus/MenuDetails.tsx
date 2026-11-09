@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Pencil } from "lucide-react";
 import { useBranchScope, usePermissions } from "@/features/auth/hooks";
 import { Pagination } from "@/components/ui/Pagination";
 import { ToggleSwitch } from "@/components/ui/ToggleSwitch";
@@ -12,14 +13,19 @@ import { formatMoney } from "@/lib/format";
 import { toApiError } from "@/lib/http/errors";
 import { localizedRecord } from "@/lib/localized";
 import { menuApi, type Named } from "@/services";
+import { ItemDetailsPanel } from "./ItemDetailsPanel";
+import {
+  ITEM_DETAILS_DESTROY_PERMISSION,
+  ITEM_DETAILS_UPDATE_PERMISSION,
+  branchDetailsOf,
+  textOrNull,
+  type ItemDetailsView,
+} from "./itemDetails";
 
 /** صلاحية توفّر الصنف داخل القائمة، بالاسم الذي يعرفه الخادم. */
 const AVAILABILITY_PERMISSION = "menus.items.availability.update";
 
-interface MenuItemView {
-  id: number;
-  name: string;
-  image: string | null;
+interface MenuItemView extends ItemDetailsView {
   price: number;
   currency: string;
   categoryId: number | null;
@@ -42,6 +48,8 @@ export function MenuDetails({ record }: { record: Named }) {
   const [page, setPage] = useState(1);
   // التوفّر الذي غيّرته هذه النافذة، يظهر فوراً دون انتظار إعادة الجلب.
   const [availability, setAvailability] = useState<Partial<Record<number, boolean>>>({});
+  // الصنف الذي تُفتح تفاصيله لهذا الفرع، وتظهر لوحته فوق قائمة الأصناف.
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   // مصدر حالة التوفّر هو القائمة العامة كما يقرؤها الموقع، ونسخة الإدارة قد لا تحمل الحقل.
   const publicMenu = useQuery({
@@ -62,6 +70,11 @@ export function MenuDetails({ record }: { record: Named }) {
   const menuBranchId = toNumber(record.branch_id ?? asRecord(record.branch).id);
   const canToggle =
     permissions.has(AVAILABILITY_PERMISSION) && (!scope.isBranchScoped || scope.branchId === menuBranchId);
+  // تفاصيل الصنف في الفرع تخضع لقاعدة الفرع نفسها: مدير الفرع يعدّل قائمة فرعه وحده.
+  const branchOwned = !scope.isBranchScoped || scope.branchId === menuBranchId;
+  const canUpdateDetails = branchOwned && permissions.has(ITEM_DETAILS_UPDATE_PERMISSION);
+  const canDestroyDetails = branchOwned && permissions.has(ITEM_DETAILS_DESTROY_PERMISSION);
+  const canOpenDetails = canUpdateDetails || canDestroyDetails;
 
   const items = useMemo<MenuItemView[]>(
     () =>
@@ -78,6 +91,10 @@ export function MenuDetails({ record }: { record: Named }) {
           categoryId,
           categoryName: localizedRecord(category, language),
           available: row.is_available !== false,
+          defaultImage: textOrNull(row.default_image),
+          branch: branchDetailsOf(row.branch_details),
+          defaultDescription: textOrNull(row.default_description) ?? "",
+          defaultDescriptionAr: textOrNull(row.default_description_ar) ?? "",
         };
       }),
     [record.items, language, menuCurrency]
@@ -112,6 +129,7 @@ export function MenuDetails({ record }: { record: Named }) {
 
   const visible = active === "all" ? items : items.filter((item) => item.categoryId === active);
   const paged = pageOf(visible, page);
+  const editing = editingId === null ? null : (items.find((item) => item.id === editingId) ?? null);
 
   return (
     <div className="space-y-5">
@@ -140,6 +158,17 @@ export function MenuDetails({ record }: { record: Named }) {
         </div>
       )}
 
+      {editing && canOpenDetails && (
+        <ItemDetailsPanel
+          key={editing.id}
+          menuId={record.id}
+          item={editing}
+          canUpdate={canUpdateDetails}
+          canDestroy={canDestroyDetails}
+          onClose={() => setEditingId(null)}
+        />
+      )}
+
       {visible.length === 0 ? (
         <p className="rounded-xl bg-canvas px-4 py-8 text-center text-sm text-muted">{t("menus.details.empty")}</p>
       ) : (
@@ -147,7 +176,7 @@ export function MenuDetails({ record }: { record: Named }) {
           {paged.items.map((item) => {
             const on = isOn(item);
             return (
-              <li key={`${item.id}-${item.categoryId ?? "none"}`} className="overflow-hidden rounded-2xl border border-line bg-surface">
+              <li key={`${item.id}-${item.categoryId ?? "none"}`} className="relative overflow-hidden rounded-2xl border border-line bg-surface">
                 {item.image ? (
                   <img src={item.image} alt="" className={`aspect-square w-full object-cover ${on ? "" : "grayscale"}`} />
                 ) : (
@@ -156,6 +185,22 @@ export function MenuDetails({ record }: { record: Named }) {
                   >
                     {item.name.charAt(0)}
                   </span>
+                )}
+                {item.branch && (
+                  <span className="absolute start-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-ink">
+                    {t("itemDetails.badge")}
+                  </span>
+                )}
+                {canOpenDetails && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(item.id)}
+                    aria-label={t("itemDetails.open")}
+                    title={t("itemDetails.open")}
+                    className="absolute end-2 top-2 grid size-11 cursor-pointer place-items-center rounded-full bg-surface/90 text-ink-soft shadow ring-1 ring-line transition hover:text-ink sm:size-8"
+                  >
+                    <Pencil className="size-4" aria-hidden />
+                  </button>
                 )}
                 <div className="space-y-1 p-3">
                   <p className="line-clamp-2 text-sm font-medium text-ink">{item.name}</p>

@@ -18,6 +18,39 @@ export const surveys = createResource<Named>("surveys");
 export const contactUs = createResource<Named>("contact-us");
 export const branches = createResource<Named>("branches");
 
+// ── تفاصيل الصنف لكل فرع: صورة ووصفان يحلّان محل العام داخل قائمة الفرع ──
+/** التفاصيل التي حفظها الفرع لصنف في قائمته. `null` في الحقل يعني أن الفرع لم يغيّره فيرث العام. */
+export interface ItemBranchDetails {
+  image: string | null;
+  description: string | null;
+  description_ar: string | null;
+}
+
+/** ما يعيده الخادم بعد حفظ تفاصيل صنف لفرع أو إرجاعها إلى العام. */
+export interface MenuItemDetailsChange {
+  menu_id: number;
+  item_id: number;
+  /** الصورة والوصفان كما يراهما زبون هذا الفرع: الخاصة إن وُجدت، وإلا العامة. */
+  image: string | null;
+  description: string | null;
+  description_ar: string | null;
+  branch_details: ItemBranchDetails | null;
+  default_image: string | null;
+  default_description: string | null;
+  default_description_ar: string | null;
+}
+
+/**
+ * ما يُرسل عند الحفظ. كل حقل اختياري، وما لا يُرسل لا يتغيّر. الوصف الفارغ يرجع إلى العام،
+ * و`remove_image` يرجع الصورة إلى العامة، ولا يُرسل مع `image` في الطلب نفسه.
+ */
+export interface ItemDetailsPatch {
+  image?: File;
+  remove_image?: boolean;
+  description?: string;
+  description_ar?: string;
+}
+
 /** صورة تصنيف داخل فرع: الصورة المعروضة، والعامة، وصورة الفرع الخاصة إن وُجدت. */
 export interface BranchCategoryImage extends RawBilingual {
   id: number;
@@ -152,6 +185,33 @@ export const menuApi = {
     api
       .put(`menus/${menuId}/items/${itemId}/availability`, { is_available: isAvailable })
       .then((response) => response.data as unknown),
+
+  /**
+   * حفظ صورة الصنف ووصفه في هذا الفرع، ولا يُرسل إلا ما تغيّر. مع ملف صورة يذهب الطلب `FormData` بـ `POST`
+   * و`_method=PUT`، وبدونه `PUT` بـ JSON.
+   */
+  saveItemDetails: (menuId: Id, itemId: Id, patch: ItemDetailsPatch) => {
+    const url = `menus/${menuId}/items/${itemId}/details`;
+    if (patch.image) {
+      const form = new FormData();
+      form.append("_method", "PUT");
+      form.append("image", patch.image);
+      if (patch.description !== undefined) form.append("description", patch.description);
+      if (patch.description_ar !== undefined) form.append("description_ar", patch.description_ar);
+      return api.post(url, form).then((response) => unwrapData<MenuItemDetailsChange>(response.data));
+    }
+    const body: Record<string, unknown> = {};
+    if (patch.description !== undefined) body.description = patch.description;
+    if (patch.description_ar !== undefined) body.description_ar = patch.description_ar;
+    if (patch.remove_image) body.remove_image = true;
+    return api.put(url, body).then((response) => unwrapData<MenuItemDetailsChange>(response.data));
+  },
+
+  /** إرجاع صورة الصنف ووصفه في هذا الفرع إلى العامين. يُقبل حتى لو لم يكن للفرع شيء محفوظ. */
+  resetItemDetails: (menuId: Id, itemId: Id) =>
+    api
+      .delete(`menus/${menuId}/items/${itemId}/details`)
+      .then((response) => unwrapData<MenuItemDetailsChange>(response.data)),
 };
 
 // ── المكونات داخل قائمة معيّنة (غير كتالوج المكونات العام) ─────────────

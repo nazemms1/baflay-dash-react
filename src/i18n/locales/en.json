@@ -1032,6 +1032,7 @@
   },
   "permissions": {
     "segments": {
+      "details": "Details",
       "index": "List",
       "show": "View details",
       "create": "Create",
@@ -1197,6 +1198,31 @@
     "off": "Off",
     "saved": "Combo setting saved",
     "formHint": "The “Combo” switch next to each item saves as soon as you move it, without waiting for “Save”. It shows for items already in the menu when the menu has a combo price."
+  },
+  "itemDetails": {
+    "open": "Item details in this branch",
+    "badge": "Branch-specific",
+    "title": "Item details in your branch: {{name}}",
+    "hint": "This item's image and description for your branch only. What you leave unchanged stays as in the general item.",
+    "image": "Image",
+    "imageSource": {
+      "pending": "New image, saved with the Save button",
+      "branch": "Branch-specific image",
+      "default": "General image",
+      "none": "No image"
+    },
+    "upload": "Upload image",
+    "change": "Change image",
+    "useGeneralImage": "General image",
+    "undoGeneralImage": "Undo",
+    "defaultAfterSave": "The general image will show after saving.",
+    "description": "Description",
+    "general": "General description",
+    "usesGeneral": "Empty = the general description is shown",
+    "reset": "Restore all to general",
+    "resetConfirm": "The image and description of \"{{name}}\" in this branch will be removed, and the branch will go back to the general item. Continue?",
+    "saved": "Item details saved for the branch",
+    "resetDone": "The item in your branch is back to its general image and description"
   },
   "itemAvailability": {
     "toggle": "Item availability in this menu",
